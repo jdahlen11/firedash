@@ -1,22 +1,141 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-  background: #060a13;
+:root {
+  --bg-deep: #0B0F19;
+  --bg-surface: #111827;
+  --bg-card: #1F2937;
+  --border: #374151;
+  --text-primary: #F9FAFB;
+  --text-secondary: #9CA3AF;
+  --text-muted: #6B7280;
+  --accent-blue: #3B82F6;
+  --accent-emerald: #10B981;
+  --accent-amber: #F59E0B;
+  --accent-red: #EF4444;
+  --accent-orange: #F97316;
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #1e293b transparent;
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: "Outfit", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
 }
-::-webkit-scrollbar { width: 6px; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #4B5563; }
+
+/* Glass morphism utility */
+.glass {
+  background: rgba(17, 24, 39, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(55, 65, 81, 0.5);
+}
+
+.glass-strong {
+  background: rgba(31, 41, 55, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(55, 65, 81, 0.6);
+}
+
+/* Mono text */
+.mono { font-family: "IBM Plex Mono", "Consolas", monospace; }
+
+/* Glow effects */
+.glow-blue { box-shadow: 0 0 12px rgba(59, 130, 246, 0.25); }
+.glow-red { box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
+.glow-emerald { box-shadow: 0 0 12px rgba(16, 185, 129, 0.25); }
+.glow-amber { box-shadow: 0 0 12px rgba(245, 158, 11, 0.25); }
+
+/* Scan line effect for header */
+.scanline {
+  position: relative;
+  overflow: hidden;
+}
+.scanline::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+  animation: scanline 4s linear infinite;
+}
+@keyframes scanline {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+
+/* Pulse dot */
+@keyframes livePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+.live-dot {
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+/* Stagger animation for list items */
+.stagger-item {
+  animation: slideUp 0.3s ease-out both;
+}
+
+/* Incident type badge colors */
+.badge-ems { background: rgba(249, 115, 22, 0.15); color: #F97316; border: 1px solid rgba(249, 115, 22, 0.3); }
+.badge-fire { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+.badge-tc { background: rgba(234, 179, 8, 0.15); color: #EAB308; border: 1px solid rgba(234, 179, 8, 0.3); }
+.badge-other { background: rgba(107, 114, 128, 0.15); color: #9CA3AF; border: 1px solid rgba(107, 114, 128, 0.3); }
+.badge-hazmat { background: rgba(168, 85, 247, 0.15); color: #A855F7; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+/* Status badges */
+.status-dispatched { color: #F59E0B; }
+.status-enroute { color: #3B82F6; }
+.status-onscene { color: #EF4444; }
+.status-transport { color: #A855F7; }
+.status-hospital { color: #06B6D4; }
+.status-available { color: #10B981; }
+
+/* Tab active indicator */
+.tab-active {
+  position: relative;
+}
+.tab-active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-blue);
+  border-radius: 1px 1px 0 0;
+}
+
+/* KPI card hover effect */
+.kpi-card {
+  transition: all 0.2s ease;
+}
+.kpi-card:hover {
+  border-color: rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
+}
+
+/* Incident row hover */
+.incident-row {
+  transition: all 0.15s ease;
+}
+.incident-row:hover {
+  background: rgba(59, 130, 246, 0.06) !important;
+}
