@@ -10,12 +10,15 @@ const PK=e[13]+e[1]+e[2]+'brady'+'5'+'r'+e.toLowerCase()[6]+e[5]+'gs';
 
 function get(u:string):Promise<string>{
   return new Promise((resolve,reject)=>{
+    const url = new URL(u);
     const req=https.get(u,{
       headers:{
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
         'Accept':'application/json,text/plain,*/*',
+        'Accept-Language':'en-US,en;q=0.9',
         'Referer':'https://web.pulsepoint.org/',
-        'Origin':'https://web.pulsepoint.org'
+        'Origin':'https://web.pulsepoint.org',
+        'Host': url.hostname,
       }
     },res=>{
       let d='';
@@ -24,25 +27,30 @@ function get(u:string):Promise<string>{
       res.on('error',reject);
     });
     req.on('error',reject);
-    req.setTimeout(10000,()=>{req.destroy();reject(new Error('timeout'));});
+    req.setTimeout(15000,()=>{req.destroy();reject(new Error('timeout'));});
   });
 }
 
 function dec(raw:string):{data:any;error?:string}{
   try{
     const j=JSON.parse(raw);
+
+    // If response has incidents directly (unencrypted new API)
+    if(j.incidents) return {data: j};
+    if(j.active) return {data: {incidents: j}};
+
+    // Encrypted response (ct/iv/s format)
     if(!j.ct)return{data:null,error:'no ct field in response'};
 
     const ct=Buffer.from(j.ct,'base64');
     const iv=Buffer.from(j.iv,'hex');
     const salt=Buffer.from(j.s,'hex');
 
-    // Key derivation: MD5-based (CryptoJS EvpKDF compatible)
     let key=Buffer.alloc(0);
     let block=Buffer.alloc(0);
     const pass=Buffer.from(PK);
 
-    while(key.length<48){  // Need 32 bytes key + 16 bytes IV but we already have IV
+    while(key.length<48){
       const h=crypto.createHash('md5');
       if(block.length>0)h.update(block);
       h.update(pass);
@@ -52,20 +60,16 @@ function dec(raw:string):{data:any;error?:string}{
     }
 
     const aesKey=key.subarray(0,32);
-
     const decipher=crypto.createDecipheriv('aes-256-cbc',aesKey,iv);
     decipher.setAutoPadding(false);
     let out=Buffer.concat([decipher.update(ct),decipher.final()]);
 
-    // Remove PKCS7 padding
     const padLen=out[out.length-1];
     if(padLen>0&&padLen<=16){
       out=out.subarray(0,out.length-padLen);
     }
 
     let str=out.toString('utf8');
-
-    // The decrypted data is a JSON string wrapped in quotes
     const firstQ=str.indexOf('"');
     const lastQ=str.lastIndexOf('"');
     if(firstQ>=0&&lastQ>firstQ){
@@ -87,10 +91,31 @@ export default async function handler(req:VercelRequest,res:VercelResponse){
 
   try{
     const results=await Promise.allSettled(LAFD.map(async id=>{
-      const raw=await get(`https://web.pulsepoint.org/DB/giba.php?agency_id=${id}`);
+      // Try new API endpoint first, fall back to legacy
+      let raw = '';
+      let endpoint = '';
+      try {
+        endpoint = `https://api.pulsepoint.org/v1/webapp?resource=incidents&agencyid=${id}`;
+        raw = await get(endpoint);
+        // Check if we got HTML instead of JSON
+        if(raw.trimStart().startsWith('<')){
+          throw new Error('got HTML, trying legacy');
+        }
+      } catch {
+        try {
+          endpoint = `https://web.pulsepoint.org/DB/giba.php?agency_id=${id}`;
+          raw = await get(endpoint);
+          if(raw.trimStart().startsWith('<')){
+            return{id,incidents:[],error:'both endpoints returned HTML',rawLen:raw.length,rawStart:raw.substring(0,200)};
+          }
+        } catch(e2:any) {
+          return{id,incidents:[],error:e2.message,rawLen:0,rawStart:''};
+        }
+      }
+
       const{data,error}=dec(raw);
-      if(error)return{id,incidents:[],error,rawLen:raw.length,rawStart:raw.substring(0,100)};
-      const active=data?.incidents?.active||[];
+      if(error)return{id,incidents:[],error,rawLen:raw.length,rawStart:raw.substring(0,200)};
+      const active=data?.incidents?.active||data?.active||[];
       return{id,incidents:active,error:null,rawLen:raw.length};
     }));
 
@@ -126,11 +151,11 @@ export default async function handler(req:VercelRequest,res:VercelResponse){
 
     all.sort((a:any,b:any)=>(b.time||'').localeCompare(a.time||''));
 
-    const resp:any={ok:true,ts:new Date().toISOString(),total:all.length,bureaus,incidents:all,password:PK};
+    const resp:any={ok:true,ts:new Date().toISOString(),total:all.length,bureaus,incidents:all};
     if(debug||all.length===0)resp.errors=errors;
 
     return res.json(resp);
   }catch(err:any){
-    return res.status(500).json({ok:false,error:err.message,password:PK});
+    return res.status(500).json({ok:false,error:err.message});
   }
 }
