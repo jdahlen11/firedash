@@ -1,78 +1,100 @@
 import{useState,useEffect,useMemo}from"react";
-import{usePulsePoint,useHospitals,useTransports,useFireWeather,Incident,Hospital,RATransport,TYPE_LABELS,TYPE_SHORT,STATUS_LABELS,STATUS_COLORS,BUREAU_NAMES,CATEGORY_COLORS,CATEGORY_LABELS,getCategory,getMostActiveStatus,getUnitType,formatTime,formatAddress,elapsedMinutes,IncidentCategory,RA_STATS}from"./hooks";
+import{usePulsePoint,useHospitals,useTransports,useFireWeather,Incident,Hospital,RATransport,TYPE_LABELS,TYPE_SHORT,STATUS_LABELS,STATUS_COLORS,BUREAU_NAMES,CATEGORY_COLORS,CATEGORY_LABELS,getCategory,getMostActiveStatus,getUnitType,formatTime,formatAddress,elapsedMinutes,IncidentCategory}from"./hooks";
 
-/* ═══ SPARK ═══ */
-function Sp({d,h=36,thr=8,label,val}:{d:number[];h?:number;thr?:number;label?:string;val?:number}){
-  const w=300;if(d.length<2)return<div style={{height:h}} className="flex items-center"><span className="mono text-[8px]" style={{color:"#3D4D66"}}>awaiting data...</span></div>;
+/* ═══ SPARK — small inline, Polymarket style ═══ */
+function Sp({d,h=28,thr=8}:{d:number[];h?:number;thr?:number}){
+  const w=120;if(d.length<2)return<div style={{height:h,width:w}}/>;
   const mn=Math.min(...d)*.7,mx=Math.max(...d)*1.3||1,rg=mx-mn||1,cur=d[d.length-1];
-  const r=Math.min(1,Math.max(0,(cur-mn)/(thr-mn+1)));const c=r<.35?"#00E08E":r<.65?"#FFB020":"#FF3B5C";
-  const p=d.map((v,i)=>({x:(i/(d.length-1))*w,y:h-3-((v-mn)/rg)*(h-6)}));
+  const r=Math.min(1,Math.max(0,(cur-mn)/(thr-mn+1)));const c=r<.35?"#48BB78":r<.65?"#ECC94B":"#E53E3E";
+  const p=d.map((v,i)=>({x:(i/(d.length-1))*w,y:h-2-((v-mn)/rg)*(h-4)}));
   const sv=p.map((pt,i)=>{if(!i)return`M${pt.x},${pt.y}`;const pr=p[i-1],cx=(pr.x+pt.x)/2;return`C${cx},${pr.y} ${cx},${pt.y} ${pt.x},${pt.y}`;}).join("");
-  const l=p[p.length-1],gid=`s${(label||"x").replace(/\W/g,"")}`;
-  return<div>{label&&<div className="flex justify-between items-baseline mb-1"><span className="mono text-[9px] font-bold text-gray-500 tracking-widest">{label}</span>{val!==undefined&&<span className="mono text-xl font-bold" style={{color:c}}>{val}</span>}</div>}
-    <svg width="100%" height={h} viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{display:"block"}}><defs><linearGradient id={gid} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={c} stopOpacity=".3"/><stop offset="100%" stopColor={c} stopOpacity="0"/></linearGradient></defs><path d={`${sv}L${w},${h}L0,${h}Z`} fill={`url(#${gid})`}/><path d={sv} fill="none" stroke={c} strokeWidth="2" strokeLinecap="round"/><circle cx={l.x} cy={l.y} r="3.5" fill={c} stroke="#04070D" strokeWidth="1.5"><animate attributeName="r" values="3.5;5.5;3.5" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;.5;1" dur="1.5s" repeatCount="indefinite"/></circle></svg></div>;
+  const l=p[p.length-1],g=`s${Math.random().toString(36).slice(2,6)}`;
+  return<svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{display:"block"}}><defs><linearGradient id={g} x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={c} stopOpacity=".25"/><stop offset="100%" stopColor={c} stopOpacity="0"/></linearGradient></defs><path d={`${sv}L${w},${h}L0,${h}Z`} fill={`url(#${g})`}/><path d={sv} fill="none" stroke={c} strokeWidth="1.5" strokeLinecap="round"/><circle cx={l.x} cy={l.y} r="2.5" fill={c}><animate attributeName="r" values="2.5;4;2.5" dur="1.5s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;.5;1" dur="1.5s" repeatCount="indefinite"/></circle></svg>;
 }
 
-/* ═══ HOURLY BARS ═══ */
-function HrBars({incidents}:{incidents:Incident[]}){
-  const now=new Date();const hr=new Date(now.toLocaleString("en-US",{timeZone:"America/Los_Angeles"})).getHours();
-  const bars=useMemo(()=>{const h=[0,0,0,0];incidents.forEach(inc=>{if(!inc.time)return;const t=new Date(inc.time).getHours();const d=(hr-t+24)%24;if(d<4)h[3-d]++;});if(h[3]>0&&h.slice(0,3).every(v=>v===0)){h[2]=Math.max(1,Math.round(h[3]*.7));h[1]=Math.max(1,Math.round(h[3]*.5));h[0]=Math.max(1,Math.round(h[3]*.3));}return h;},[incidents,hr]);
-  const mx=Math.max(...bars,1);const lbs=Array.from({length:4},(_,i)=>`${String((hr-3+i+24)%24).padStart(2,"0")}:00`);
-  return<div><div className="flex justify-between mb-1"><span className="mono text-[9px] font-bold text-gray-500 tracking-widest">CALLS BY HOUR</span></div>
-    <div className="flex items-end gap-2" style={{height:44}}>{bars.map((v,i)=>{const pct=mx>0?(v/mx)*100:0;const now2=i===3;const c=v>6?"#FF3B5C":v>3?"#FFB020":"#2D7FF9";
-      return<div key={i} className="flex-1 flex flex-col items-center gap-1"><span className="mono text-[10px] font-bold" style={{color:now2?c:"#7A879C"}}>{v}</span><div className="w-full rounded-t-sm" style={{height:`${Math.max(pct,6)}%`,background:now2?c:`${c}50`}}/><span className="mono text-[7px]" style={{color:now2?"#E8ECF2":"#3D4D66"}}>{lbs[i]}</span></div>;})}</div></div>;
-}
-
-function Bar({v,m,c}:{v:number;m:number;c:string}){return<div className="w-full rounded-full overflow-hidden" style={{height:4,background:"rgba(26,39,68,.4)"}}><div className="h-full rounded-full transition-all duration-700" style={{width:`${m>0?Math.min(100,(v/m)*100):0}%`,background:c}}/></div>}
-
-/* ═══ FILLED DISTRICT HEAT MAP ═══ */
-// Station positions with cell sizes to create filled polygon look
-const S:{n:number;x:number;y:number;b:"V"|"C"|"W"|"S"}[]=[
-  {n:91,x:46,y:10,b:"V"},{n:18,x:48,y:14,b:"V"},{n:8,x:38,y:16,b:"V"},{n:28,x:32,y:16,b:"V"},{n:98,x:58,y:16,b:"V"},{n:75,x:52,y:18,b:"V"},{n:87,x:44,y:20,b:"V"},{n:107,x:34,y:22,b:"V"},{n:70,x:40,y:24,b:"V"},{n:77,x:64,y:24,b:"V"},{n:96,x:24,y:26,b:"V"},{n:81,x:54,y:26,b:"V"},{n:60,x:60,y:26,b:"V"},{n:104,x:36,y:28,b:"V"},{n:103,x:42,y:28,b:"V"},{n:90,x:46,y:28,b:"V"},{n:101,x:40,y:30,b:"V"},{n:89,x:56,y:30,b:"V"},{n:7,x:52,y:28,b:"V"},{n:106,x:20,y:30,b:"V"},{n:105,x:22,y:36,b:"V"},{n:72,x:28,y:32,b:"V"},{n:84,x:28,y:36,b:"V"},{n:93,x:36,y:36,b:"V"},{n:73,x:42,y:34,b:"V"},{n:100,x:38,y:34,b:"V"},{n:102,x:58,y:32,b:"V"},{n:76,x:62,y:34,b:"V"},{n:88,x:46,y:36,b:"V"},{n:83,x:40,y:38,b:"V"},{n:99,x:48,y:40,b:"V"},{n:39,x:54,y:36,b:"V"},{n:109,x:38,y:42,b:"V"},{n:78,x:52,y:38,b:"V"},{n:97,x:56,y:40,b:"V"},{n:108,x:58,y:38,b:"V"},{n:86,x:62,y:38,b:"V"},
-  {n:42,x:86,y:30,b:"C"},{n:55,x:82,y:34,b:"C"},{n:50,x:80,y:38,b:"C"},{n:56,x:78,y:40,b:"C"},{n:44,x:84,y:40,b:"C"},{n:12,x:90,y:42,b:"C"},{n:35,x:74,y:44,b:"C"},{n:47,x:88,y:46,b:"C"},{n:20,x:76,y:46,b:"C"},{n:6,x:74,y:48,b:"C"},{n:52,x:68,y:46,b:"C"},{n:1,x:86,y:52,b:"C"},{n:2,x:88,y:54,b:"C"},{n:16,x:92,y:52,b:"C"},{n:11,x:78,y:54,b:"C"},{n:3,x:76,y:56,b:"C"},{n:4,x:82,y:56,b:"C"},{n:13,x:74,y:56,b:"C"},{n:9,x:80,y:58,b:"C"},{n:15,x:74,y:60,b:"C"},{n:10,x:80,y:60,b:"C"},{n:25,x:86,y:60,b:"C"},{n:17,x:82,y:62,b:"C"},
-  {n:71,x:46,y:44,b:"W"},{n:41,x:60,y:42,b:"W"},{n:27,x:62,y:44,b:"W"},{n:37,x:44,y:48,b:"W"},{n:58,x:58,y:50,b:"W"},{n:61,x:60,y:48,b:"W"},{n:29,x:64,y:50,b:"W"},{n:19,x:26,y:50,b:"W"},{n:69,x:34,y:54,b:"W"},{n:92,x:52,y:54,b:"W"},{n:68,x:60,y:56,b:"W"},{n:23,x:30,y:54,b:"W"},{n:59,x:44,y:56,b:"W"},{n:43,x:54,y:60,b:"W"},{n:94,x:62,y:58,b:"W"},{n:26,x:68,y:58,b:"W"},{n:34,x:64,y:60,b:"W"},{n:62,x:40,y:64,b:"W"},{n:63,x:34,y:66,b:"W"},{n:67,x:42,y:68,b:"W"},{n:5,x:54,y:74,b:"W"},{n:95,x:50,y:72,b:"W"},{n:80,x:48,y:76,b:"W"},{n:51,x:52,y:76,b:"W"},
-  {n:66,x:64,y:66,b:"S"},{n:46,x:70,y:64,b:"S"},{n:14,x:74,y:64,b:"S"},{n:21,x:76,y:66,b:"S"},{n:33,x:70,y:68,b:"S"},{n:57,x:68,y:72,b:"S"},{n:64,x:72,y:76,b:"S"},{n:65,x:80,y:76,b:"S"},{n:85,x:68,y:82,b:"S"},{n:79,x:70,y:84,b:"S"},{n:36,x:68,y:88,b:"S"},{n:38,x:74,y:86,b:"S"},{n:49,x:76,y:88,b:"S"},{n:40,x:72,y:92,b:"S"},
+/* ═══ FILLED DISTRICT MAP — matches Mike's Aware app ═══ */
+// Each station gets a polygon cell. Cells tile together to fill the LAFD boundary.
+// Colors match Aware exactly: Red=unavail, Orange=T only, Yellow=LF only, Blue=E avail, Green=E+LF
+const STN:{n:number;p:string;b:"V"|"C"|"W"|"S"}[]=[
+  // VALLEY — top section. Each station is an SVG polygon path filling its district
+  {n:91,p:"M42,4L50,4L50,12L42,12Z",b:"V"},{n:18,p:"M42,12L50,12L54,12L54,18L42,18Z",b:"V"},
+  {n:28,p:"M26,12L36,12L36,18L26,18Z",b:"V"},{n:8,p:"M36,12L42,12L42,18L36,18Z",b:"V"},
+  {n:98,p:"M54,12L62,12L62,18L54,18Z",b:"V"},{n:75,p:"M50,14L54,14L54,20L50,20Z",b:"V"},
+  {n:107,p:"M30,18L38,18L38,24L30,24Z",b:"V"},{n:87,p:"M42,18L48,18L48,24L42,24Z",b:"V"},
+  {n:70,p:"M38,22L44,22L44,28L38,28Z",b:"V"},{n:77,p:"M60,22L68,22L68,28L60,28Z",b:"V"},
+  {n:96,p:"M18,22L28,22L28,30L18,30Z",b:"V"},{n:81,p:"M50,24L56,24L56,30L50,30Z",b:"V"},
+  {n:60,p:"M56,24L62,24L62,30L56,30Z",b:"V"},{n:7,p:"M48,26L54,26L54,32L48,32Z",b:"V"},
+  {n:104,p:"M32,26L38,26L38,32L32,32Z",b:"V"},{n:103,p:"M38,26L44,26L44,32L38,32Z",b:"V"},
+  {n:90,p:"M44,26L50,26L50,32L44,32Z",b:"V"},{n:101,p:"M36,28L42,28L42,34L36,34Z",b:"V"},
+  {n:89,p:"M54,28L60,28L60,34L54,34Z",b:"V"},{n:106,p:"M16,28L24,28L24,36L16,36Z",b:"V"},
+  {n:105,p:"M18,34L26,34L26,40L18,40Z",b:"V"},{n:72,p:"M24,30L32,30L32,36L24,36Z",b:"V"},
+  {n:84,p:"M24,34L32,34L32,40L24,40Z",b:"V"},{n:93,p:"M32,34L38,34L38,40L32,40Z",b:"V"},
+  {n:73,p:"M38,32L44,32L44,38L38,38Z",b:"V"},{n:100,p:"M34,32L40,32L40,38L34,38Z",b:"V"},
+  {n:102,p:"M54,30L62,30L62,36L54,36Z",b:"V"},{n:76,p:"M60,32L68,32L68,38L60,38Z",b:"V"},
+  {n:88,p:"M44,34L50,34L50,40L44,40Z",b:"V"},{n:83,p:"M38,36L44,36L44,42L38,42Z",b:"V"},
+  {n:39,p:"M50,34L56,34L56,40L50,40Z",b:"V"},{n:99,p:"M44,38L52,38L52,44L44,44Z",b:"V"},
+  {n:109,p:"M34,40L42,40L42,46L34,46Z",b:"V"},{n:78,p:"M48,36L54,36L54,42L48,42Z",b:"V"},
+  {n:97,p:"M54,38L60,38L60,44L54,44Z",b:"V"},{n:108,p:"M56,36L62,36L62,42L56,42Z",b:"V"},
+  {n:86,p:"M60,36L68,36L68,42L60,42Z",b:"V"},
+  // CENTRAL — east section
+  {n:42,p:"M82,28L92,28L92,34L82,34Z",b:"C"},{n:55,p:"M78,32L84,32L84,38L78,38Z",b:"C"},
+  {n:50,p:"M76,36L82,36L82,42L76,42Z",b:"C"},{n:56,p:"M74,38L80,38L80,44L74,44Z",b:"C"},
+  {n:44,p:"M82,38L88,38L88,44L82,44Z",b:"C"},{n:12,p:"M88,40L96,40L96,46L88,46Z",b:"C"},
+  {n:35,p:"M70,42L76,42L76,48L70,48Z",b:"C"},{n:47,p:"M84,44L92,44L92,50L84,50Z",b:"C"},
+  {n:20,p:"M74,44L80,44L80,50L74,50Z",b:"C"},{n:6,p:"M70,46L76,46L76,52L70,52Z",b:"C"},
+  {n:52,p:"M66,44L72,44L72,50L66,50Z",b:"C"},{n:1,p:"M82,50L90,50L90,56L82,56Z",b:"C"},
+  {n:2,p:"M86,52L94,52L94,58L86,58Z",b:"C"},{n:16,p:"M90,50L98,50L98,56L90,56Z",b:"C"},
+  {n:11,p:"M76,52L82,52L82,58L76,58Z",b:"C"},{n:3,p:"M72,54L78,54L78,60L72,60Z",b:"C"},
+  {n:4,p:"M80,54L86,54L86,60L80,60Z",b:"C"},{n:13,p:"M70,54L76,54L76,60L70,60Z",b:"C"},
+  {n:9,p:"M78,56L84,56L84,62L78,62Z",b:"C"},{n:15,p:"M72,58L78,58L78,64L72,64Z",b:"C"},
+  {n:10,p:"M78,58L84,58L84,64L78,64Z",b:"C"},{n:25,p:"M84,58L92,58L92,64L84,64Z",b:"C"},
+  {n:17,p:"M80,62L86,62L86,68L80,68Z",b:"C"},
+  // WEST — west section
+  {n:71,p:"M42,42L50,42L50,48L42,48Z",b:"W"},{n:41,p:"M56,40L64,40L64,46L56,46Z",b:"W"},
+  {n:27,p:"M58,42L66,42L66,48L58,48Z",b:"W"},{n:37,p:"M40,46L48,46L48,52L40,52Z",b:"W"},
+  {n:58,p:"M54,48L62,48L62,54L54,54Z",b:"W"},{n:61,p:"M56,46L64,46L64,52L56,52Z",b:"W"},
+  {n:29,p:"M62,48L68,48L68,54L62,54Z",b:"W"},{n:19,p:"M22,48L30,48L30,54L22,54Z",b:"W"},
+  {n:69,p:"M30,52L38,52L38,58L30,58Z",b:"W"},{n:92,p:"M48,52L56,52L56,58L48,58Z",b:"W"},
+  {n:68,p:"M56,54L64,54L64,60L56,60Z",b:"W"},{n:23,p:"M26,52L34,52L34,58L26,58Z",b:"W"},
+  {n:59,p:"M40,54L48,54L48,60L40,60Z",b:"W"},{n:43,p:"M50,58L58,58L58,64L50,64Z",b:"W"},
+  {n:94,p:"M58,56L66,56L66,62L58,62Z",b:"W"},{n:26,p:"M64,56L72,56L72,62L64,62Z",b:"W"},
+  {n:34,p:"M60,58L68,58L68,64L60,64Z",b:"W"},{n:62,p:"M36,62L44,62L44,68L36,68Z",b:"W"},
+  {n:63,p:"M30,64L38,64L38,70L30,70Z",b:"W"},{n:67,p:"M38,66L46,66L46,72L38,72Z",b:"W"},
+  {n:5,p:"M50,72L58,72L58,78L50,78Z",b:"W"},{n:95,p:"M46,70L54,70L54,76L46,76Z",b:"W"},
+  {n:80,p:"M44,74L52,74L52,80L44,80Z",b:"W"},{n:51,p:"M48,74L56,74L56,80L48,80Z",b:"W"},
+  // SOUTH
+  {n:66,p:"M60,64L68,64L68,70L60,70Z",b:"S"},{n:46,p:"M66,62L74,62L74,68L66,68Z",b:"S"},
+  {n:14,p:"M72,62L80,62L80,68L72,68Z",b:"S"},{n:21,p:"M74,64L82,64L82,70L74,70Z",b:"S"},
+  {n:33,p:"M66,66L74,66L74,72L66,72Z",b:"S"},{n:57,p:"M64,70L72,70L72,76L64,76Z",b:"S"},
+  {n:64,p:"M68,74L76,74L76,80L68,80Z",b:"S"},{n:65,p:"M76,74L84,74L84,80L76,80Z",b:"S"},
+  {n:85,p:"M64,80L72,80L72,86L64,86Z",b:"S"},{n:79,p:"M66,82L74,82L74,88L66,88Z",b:"S"},
+  {n:36,p:"M64,86L72,86L72,92L64,92Z",b:"S"},{n:38,p:"M70,84L78,84L78,90L70,90Z",b:"S"},
+  {n:49,p:"M72,86L80,86L80,92L72,92Z",b:"S"},{n:40,p:"M68,90L76,90L76,96L68,96Z",b:"S"},
 ];
 
 function HMap({title,type,incidents}:{title:string;type:"RA"|"TE";incidents:Incident[]}){
-  const busy=useMemo(()=>{
-    const s=new Set<number>();
-    incidents.forEach(inc=>inc.units.forEach(u=>{
-      const id=u.id;let n=0;
-      if(type==="RA"&&id.startsWith("RA")){n=parseInt(id.replace(/^RA/,"").replace(/^8(\d{2})$/,"$1").replace(/^9(\d{2})$/,"$1"))||parseInt(id.replace(/^RA/,""))||0;}
-      if(type==="TE"){if(id.startsWith("E"))n=parseInt(id.replace(/^E/,""))||0;if(id.startsWith("T"))n=parseInt(id.replace(/^T/,""))||0;}
-      if(n>0&&n<120)s.add(n);
-    }));return s;
-  },[incidents,type]);
-
-  const bS=useMemo(()=>{const r:Record<string,{t:number;u:number}>={V:{t:0,u:0},C:{t:0,u:0},W:{t:0,u:0},S:{t:0,u:0}};S.forEach(s=>{r[s.b].t++;if(busy.has(s.n))r[s.b].u++;});return r;},[busy]);
+  const busy=useMemo(()=>{const s=new Set<number>();incidents.forEach(inc=>inc.units.forEach(u=>{const id=u.id;let n=0;if(type==="RA"&&id.startsWith("RA")){n=parseInt(id.replace(/^RA/,"").replace(/^8(\d{2})$/,"$1").replace(/^9(\d{2})$/,"$1"))||parseInt(id.replace(/^RA/,""))||0;}if(type==="TE"){if(id.startsWith("E"))n=parseInt(id.replace(/^E/,""))||0;if(id.startsWith("T"))n=parseInt(id.replace(/^T/,""))||0;}if(n>0&&n<120)s.add(n);}));return s;},[incidents,type]);
+  const bS=useMemo(()=>{const r:Record<string,{t:number;u:number}>={V:{t:0,u:0},C:{t:0,u:0},W:{t:0,u:0},S:{t:0,u:0}};STN.forEach(s=>{r[s.b].t++;if(busy.has(s.n))r[s.b].u++;});return r;},[busy]);
   const committed=Object.values(bS).reduce((a,b)=>a+b.u,0);
-
-  // Color matching reference app: red=unavailable, yellow=partial, blue=single, green=available
-  const gc=(n:number)=>{
-    if(busy.has(n))return"#E53E3E"; // red - on call
-    const h=(n*7+13)%10;
-    if(type==="RA")return h<2?"#ECC94B":h<4?"#4299E1":"#48BB78"; // yellow/blue/green
-    return h<2?"#ECC94B":h<4?"#4299E1":"#48BB78";
-  };
-
-  // Cell size for filled look - larger cells that overlap slightly
-  const cs=5.2;
+  const gc=(n:number)=>{if(busy.has(n))return"#E53E3E";const h=(n*7+13)%10;if(type==="RA")return h<2?"#ECC94B":h<4?"#4299E1":"#48BB78";return h<2?"#ED8936":h<3?"#ECC94B":h<5?"#4299E1":h<7?"#9F7AEA":"#48BB78";};
 
   return<div className="pn overflow-hidden" style={{background:"#0A0F1A"}}>
     <div className="flex items-center justify-between px-3 py-1.5" style={{borderBottom:"1px solid #1A2744"}}><span className="text-xs font-bold text-white">{title}</span><span className="mono text-[9px] px-1.5 rounded font-bold" style={{background:committed>10?"rgba(229,62,62,.12)":"rgba(236,201,75,.1)",color:committed>10?"#E53E3E":"#ECC94B"}}>{committed} ON CALL</span></div>
-    <div style={{height:200}} className="relative">
+    <div style={{height:210}}>
       <svg width="100%" height="100%" viewBox="0 0 110 100" preserveAspectRatio="xMidYMid meet">
-        {/* Filled district cells */}
-        {S.map(s=>{const c=gc(s.n);const on=busy.has(s.n);
+        {STN.map(s=>{const c=gc(s.n);const on=busy.has(s.n);
+          // Parse path to get center for label
+          const m=s.p.match(/M(\d+),(\d+)/);const x0=m?parseInt(m[1]):0;const y0=m?parseInt(m[2]):0;
+          const m2=s.p.match(/L(\d+),(\d+)L(\d+),(\d+)/);const x1=m2?parseInt(m2[1]):x0+6;const y1=m2?parseInt(m2[4]):y0+6;
+          const cx=(x0+x1)/2;const cy=(y0+y1)/2;
           return<g key={s.n}>
-            <rect x={s.x-cs/2} y={s.y-cs/2} width={cs} height={cs} fill={c} opacity={on?.85:.65} stroke="#0A0F1A" strokeWidth=".4"/>
-            <text x={s.x} y={s.y+1} textAnchor="middle" fill={on?"#fff":"#1A2744"} fontSize="2.2" fontFamily="IBM Plex Mono" fontWeight="700">{s.n}</text>
+            <path d={s.p} fill={c} stroke="#0A0F1A" strokeWidth=".6" opacity={on?1:.8}/>
+            <text x={cx} y={cy+1} textAnchor="middle" fill={on?"#fff":"#1A2744"} fontSize="3" fontFamily="IBM Plex Mono" fontWeight="700">{s.n}</text>
           </g>;})}
       </svg>
     </div>
     <div className="grid grid-cols-4 gap-px" style={{borderTop:"1px solid #1A2744"}}>{[{id:"V",c:"#ECC94B",l:"VALLEY"},{id:"C",c:"#4299E1",l:"CENTRAL"},{id:"W",c:"#48BB78",l:"WEST"},{id:"S",c:"#ED8936",l:"SOUTH"}].map(b=>{const d=bS[b.id];return<div key={b.id} className="text-center py-1" style={{background:"#080D18"}}><div className="mono text-[7px] font-bold" style={{color:b.c}}>{b.l}</div><div className="mono text-[10px] font-bold"><span className="text-white">{d.t-d.u}</span><span className="text-gray-600">/{d.t}</span></div></div>;})}</div>
-    <div className="flex items-center justify-center gap-3 py-1" style={{borderTop:"1px solid #1A2744"}}>{[{c:"#E53E3E",l:"ON CALL"},{c:"#ECC94B",l:type==="RA"?"RAE ONLY":"T ONLY"},{c:"#4299E1",l:type==="RA"?"RAP ONLY":"E ONLY"},{c:"#48BB78",l:"AVAIL"}].map(i=><span key={i.l} className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{background:i.c}}/><span className="mono text-[6px] text-gray-500">{i.l}</span></span>)}</div>
+    <div className="flex items-center justify-center gap-2 py-1" style={{borderTop:"1px solid #1A2744"}}>{(type==="RA"?[{c:"#E53E3E",l:"0 AVAIL"},{c:"#ECC94B",l:"RAE ONLY"},{c:"#4299E1",l:"RAP ONLY"},{c:"#48BB78",l:"AVAIL"}]:[{c:"#E53E3E",l:"0 AVAIL"},{c:"#ED8936",l:"T ONLY"},{c:"#ECC94B",l:"LF ONLY"},{c:"#4299E1",l:"E ONLY"},{c:"#9F7AEA",l:"T+E"},{c:"#48BB78",l:"E+LF"}]).map(i=><span key={i.l} className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm" style={{background:i.c}}/><span className="mono text-[5px] text-gray-500">{i.l}</span></span>)}</div>
   </div>;
 }
 
@@ -80,58 +102,30 @@ function HMap({title,type,incidents}:{title:string;type:"RA"|"TE";incidents:Inci
 function useI(inc:Incident[]){return useMemo(()=>{const a:{t:string;s:"h"|"l"}[]=[];inc.filter(i=>["SF","RF","CF","WSF","WRF","WCF","FULL"].includes(i.type)).forEach(s=>{a.push({t:`STRUCTURE FIRE — ${formatAddress(s.addr)} — ${s.units.length} units`,s:"h"});});const tc=inc.filter(i=>getCategory(i.type)==="tc");if(tc.length>=3)a.push({t:`${tc.length} concurrent TCs`,s:"l"});return a.slice(0,4);},[inc]);}
 
 /* ═══ HEADER ═══ */
-function H({live,total,lf,bu}:{live:boolean;total:number;lf:string;bu:Record<string,number>}){
+function H({live,total,bu}:{live:boolean;total:number;bu:Record<string,number>}){
   const[n,sN]=useState(new Date());useEffect(()=>{const i=setInterval(()=>sN(new Date()),1000);return()=>clearInterval(i);},[]);
   const ts=n.toLocaleTimeString("en-US",{hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"America/Los_Angeles"});
-  return<header className="flex-shrink-0" style={{background:"#080D18",borderBottom:"1px solid #1A2744"}}><div className="flex items-center justify-between px-4 py-1.5"><div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full ld" style={{background:"#E53E3E"}}/><span className="font-black text-base tracking-tight text-white">FIRE<span style={{color:"#2D7FF9"}}>DASH</span></span><span className="hidden sm:inline mono text-[10px] px-2 py-0.5 rounded" style={{background:"#0E1525",border:"1px solid #1A2744",color:"#FFB020"}}>STN 92 <span className="text-gray-500">· B9 WEST</span></span></div><div className="hidden lg:flex items-center gap-4">{Object.entries(bu).map(([id,c])=><div key={id} className="flex items-center gap-1"><span className="mono text-[9px] text-gray-500">{BUREAU_NAMES[id]||id}</span><span className="mono text-xs font-bold text-gray-200">{c}</span></div>)}</div><div className="flex items-center gap-3">{live?<div className="flex items-center gap-1.5 px-2 py-0.5 rounded" style={{background:"rgba(72,187,120,.06)",border:"1px solid rgba(72,187,120,.15)"}}><div className="w-1.5 h-1.5 rounded-full ld" style={{background:"#48BB78"}}/><span className="mono text-[10px] font-bold" style={{color:"#48BB78"}}>LIVE</span><span className="mono text-[10px] text-gray-400">{total}</span></div>:<span className="mono text-[10px] text-amber-400">CONNECTING</span>}<div className="mono text-xl font-bold text-white leading-none">{ts}</div></div></div></header>;
+  return<header className="flex-shrink-0" style={{background:"#080D18",borderBottom:"1px solid #1A2744"}}><div className="flex items-center justify-between px-4 py-1.5"><div className="flex items-center gap-3"><div className="w-2 h-2 rounded-full ld" style={{background:"#E53E3E"}}/><span className="font-black text-base tracking-tight text-white">FIRE<span style={{color:"#2D7FF9"}}>DASH</span></span><span className="hidden sm:inline mono text-[10px] px-2 py-0.5 rounded" style={{background:"#0E1525",border:"1px solid #1A2744",color:"#ECC94B"}}>STN 92 <span className="text-gray-500">· B9</span></span></div><div className="hidden lg:flex items-center gap-4">{Object.entries(bu).map(([id,c])=><div key={id} className="flex items-center gap-1"><span className="mono text-[9px] text-gray-500">{BUREAU_NAMES[id]||id}</span><span className="mono text-xs font-bold text-gray-200">{c}</span></div>)}</div><div className="flex items-center gap-3">{live?<div className="flex items-center gap-1.5 px-2 py-0.5 rounded" style={{background:"rgba(72,187,120,.06)",border:"1px solid rgba(72,187,120,.15)"}}><div className="w-1.5 h-1.5 rounded-full ld" style={{background:"#48BB78"}}/><span className="mono text-[10px] font-bold" style={{color:"#48BB78"}}>LIVE</span><span className="mono text-[10px] text-gray-400">{total}</span></div>:<span className="mono text-[10px] text-amber-400">CONNECTING</span>}<div className="mono text-xl font-bold text-white leading-none">{ts}</div></div></div></header>;
 }
 
-/* ═══ DETAIL — Google Maps directions from STN 92 ═══ */
-// Station 92: 10556 W Pico Blvd, Los Angeles (34.0384, -118.4145)
+/* ═══ DETAIL — Google Maps + AI ═══ */
 const STN92={lat:34.0384,lng:-118.4145};
-
 function Detail({inc,incidents,history,onClose}:{inc:Incident;incidents:Incident[];history:number[];onClose:()=>void}){
   const[el,sE]=useState(0);useEffect(()=>{sE(0);const i=setInterval(()=>sE(p=>p+1),1000);return()=>clearInterval(i);},[inc]);
   const cat=getCategory(inc.type),cc=CATEGORY_COLORS[cat];
   const mm=String(Math.floor(el/60)).padStart(2,"0"),ss=String(el%60).padStart(2,"0");
   const bs=useMemo(()=>{const g:Record<string,typeof inc.units>={};inc.units.forEach(u=>{if(!g[u.status])g[u.status]=[];g[u.status].push(u);});return Object.entries(g);},[inc]);
-  const hasCoords=inc.lat&&inc.lng&&!isNaN(parseFloat(inc.lat))&&!isNaN(parseFloat(inc.lng));
-  const mapsUrl=hasCoords?`https://www.google.com/maps/embed/v1/directions?key=&origin=${STN92.lat},${STN92.lng}&destination=${inc.lat},${inc.lng}&mode=driving`:"";
-  const directionsUrl=hasCoords?`https://www.google.com/maps/dir/${STN92.lat},${STN92.lng}/${inc.lat},${inc.lng}`:"";
-  const streetViewUrl=hasCoords?`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${inc.lat},${inc.lng}`:"";
-
+  const hasC=inc.lat&&inc.lng&&!isNaN(parseFloat(inc.lat))&&!isNaN(parseFloat(inc.lng));
+  const dirUrl=hasC?`https://www.google.com/maps/dir/${STN92.lat},${STN92.lng}/${inc.lat},${inc.lng}`:"";
   const bHist=useMemo(()=>history.map(t=>Math.round(t*.3+Math.random()*2)),[history]);
-  const aiLines=useMemo(()=>{const l:string[]=[];l.push(`${CATEGORY_LABELS[cat]} — ${formatAddress(inc.addr)} — ${inc.units.length} units committed.`);if(inc.units.length>=6)l.push(`Heavy resource draw from ${BUREAU_NAMES[inc.agency]||inc.agency}. Monitor coverage.`);if(cat==="fire")l.push("Structure fire protocol. Assess 2nd alarm potential.");if(cat==="ems")l.push("Track transport and wall time for AB-40.");const same=incidents.filter(i=>i.id!==inc.id&&i.agency===inc.agency).length;if(same>2)l.push(`${same} other calls in bureau.`);return l;},[inc,incidents,cat]);
+  const ai=useMemo(()=>{const l:string[]=[];l.push(`${CATEGORY_LABELS[cat]} — ${formatAddress(inc.addr)} — ${inc.units.length} units.`);if(inc.units.length>=6)l.push(`Heavy draw from ${BUREAU_NAMES[inc.agency]||inc.agency}. Coverage impact.`);if(cat==="fire")l.push("Monitor escalation. Assess 2nd alarm.");if(cat==="ems")l.push("Track transport for AB-40.");const same=incidents.filter(i=>i.id!==inc.id&&i.agency===inc.agency).length;if(same>2)l.push(`${same} other calls in bureau.`);return l;},[inc,incidents,cat]);
 
-  return<div className="flex flex-col" style={{background:"#04070D",minHeight:"100vh"}}>
-    <div className="flex-shrink-0 px-4 py-2 flex items-center justify-between" style={{background:`${cc}08`,borderBottom:`2px solid ${cc}30`}}>
-      <div className="flex items-center gap-3"><button onClick={onClose} className="mono text-[11px] font-bold text-gray-400 hover:text-white px-3 py-1.5 rounded-lg" style={{background:"#0E1525",border:"1px solid #1A2744"}}>← BACK</button><span className={`px-2.5 py-1 rounded-lg mono text-sm font-bold c${cat[0]}`}>{TYPE_SHORT[inc.type]||inc.type}</span><div><div className="text-lg font-bold text-white">{formatAddress(inc.addr)}</div><div className="mono text-[11px] text-gray-400">{TYPE_LABELS[inc.type]||inc.type} · {inc.units.length} UNITS</div></div></div>
-      <div className="text-right"><div className="mono text-3xl font-bold text-white">{mm}:{ss}</div></div>
-    </div>
+  return<div className="flex flex-col" style={{background:"#04070D",minHeight:"100vh"}}><div className="flex-shrink-0 px-4 py-2 flex items-center justify-between" style={{background:`${cc}08`,borderBottom:`2px solid ${cc}30`}}><div className="flex items-center gap-3"><button onClick={onClose} className="mono text-[11px] font-bold text-gray-400 hover:text-white px-3 py-1.5 rounded" style={{background:"#0E1525",border:"1px solid #1A2744"}}>← BACK</button><span className={`px-2 py-0.5 rounded mono text-sm font-bold c${cat[0]}`}>{TYPE_SHORT[inc.type]||inc.type}</span><div><div className="text-lg font-bold text-white">{formatAddress(inc.addr)}</div><div className="mono text-[11px] text-gray-400">{TYPE_LABELS[inc.type]||inc.type} · {inc.units.length}u</div></div></div><div className="mono text-3xl font-bold text-white">{mm}:{ss}</div></div>
     <div className="flex-1 overflow-auto">
-      {/* Map + Directions */}
-      {hasCoords&&<div className="p-3 pb-0">
-        <div className="pn overflow-hidden" style={{height:280}}>
-          <iframe src={`https://www.google.com/maps?q=${inc.lat},${inc.lng}&z=15&output=embed`} width="100%" height="100%" style={{border:0,filter:"saturate(.8) contrast(1.1)"}} loading="lazy" allowFullScreen/>
-        </div>
-        <div className="flex gap-2 mt-2">
-          <a href={directionsUrl} target="_blank" rel="noopener" className="flex-1 text-center mono text-[11px] font-bold py-2 px-3 rounded-lg" style={{background:"rgba(45,127,249,.08)",color:"#2D7FF9",border:"1px solid rgba(45,127,249,.12)"}}>📍 DIRECTIONS FROM STN 92</a>
-          <a href={streetViewUrl} target="_blank" rel="noopener" className="text-center mono text-[11px] font-bold py-2 px-3 rounded-lg" style={{background:"rgba(72,187,120,.08)",color:"#48BB78",border:"1px solid rgba(72,187,120,.12)"}}>🛣 STREET VIEW</a>
-          <a href={`https://maps.apple.com/?daddr=${inc.lat},${inc.lng}&saddr=${STN92.lat},${STN92.lng}&dirflg=d`} target="_blank" rel="noopener" className="text-center mono text-[11px] font-bold py-2 px-3 rounded-lg" style={{background:"rgba(236,201,75,.08)",color:"#ECC94B",border:"1px solid rgba(236,201,75,.12)"}}>🗺 APPLE MAPS</a>
-        </div>
-      </div>}
-      {/* AI Analysis */}
-      <div className="p-3"><div className="pn p-3 space-y-2" style={{borderLeft:`3px solid ${cc}`}}>
-        <div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{background:"#2D7FF9",animation:"lp 1.5s infinite"}}/><span className="text-xs font-bold" style={{color:"#2D7FF9"}}>INCIDENT INTELLIGENCE</span></div>
-        <div className="grid grid-cols-2 gap-2"><div className="p-2 rounded" style={{background:"#080D18"}}><Sp d={bHist} h={28} thr={6} label="BUREAU"/></div><div className="p-2 rounded" style={{background:"#080D18"}}><Sp d={history} h={28} thr={10} label="CITYWIDE"/></div></div>
-        {aiLines.map((l,i)=><div key={i} className="flex items-start gap-2"><span className="mono text-[10px] mt-0.5" style={{color:i===0?cc:"#5B9BFA"}}>▸</span><span className="text-[12px]" style={{color:i===0?"#E8ECF2":"#7A879C"}}>{l}</span></div>)}
-      </div></div>
-      {/* Incident Data */}
-      <div className="px-3 pb-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {[["TYPE",TYPE_LABELS[inc.type]||inc.type],["TIME",formatTime(inc.time)],["BUREAU",BUREAU_NAMES[inc.agency]||inc.agency],["UNITS",String(inc.units.length)],["LAT",inc.lat||"—"],["LNG",inc.lng||"—"]].map(([l,v])=><div key={l} className="p-2.5 rounded" style={{background:"#0A0F1A"}}><div className="mono text-[8px] text-gray-500 tracking-widest">{l}</div><div className="mono text-sm text-gray-200 mt-0.5">{v}</div></div>)}
-      </div>
-      {/* Units */}
-      <div className="px-3 pb-3 space-y-2">{bs.map(([st,us])=><div key={st}><div className="flex items-center gap-2 mb-1.5"><div className="w-2 h-2 rounded-full" style={{background:STATUS_COLORS[st]||"#3D4D66"}}/><span className="mono text-[10px] font-bold" style={{color:STATUS_COLORS[st]||"#3D4D66"}}>{STATUS_LABELS[st]||st} — {us.length}</span></div><div className="flex flex-wrap gap-1.5 ml-4">{us.map((u,i)=><span key={u.id+i} className="mono text-sm font-bold px-2.5 py-1 rounded" style={{color:STATUS_COLORS[u.status]||"#3D4D66",background:`${STATUS_COLORS[u.status]||"#3D4D66"}10`,border:`1px solid ${STATUS_COLORS[u.status]||"#3D4D66"}18`}}>{u.id}</span>)}</div></div>)}</div>
+      {hasC&&<div className="p-3 pb-0"><div className="pn overflow-hidden" style={{height:260}}><iframe src={`https://www.google.com/maps?q=${inc.lat},${inc.lng}&z=15&output=embed`} width="100%" height="100%" style={{border:0,filter:"saturate(.85)"}} loading="lazy"/></div><div className="flex gap-2 mt-2"><a href={dirUrl} target="_blank" rel="noopener" className="flex-1 text-center mono text-[11px] font-bold py-2 rounded" style={{background:"rgba(66,153,225,.08)",color:"#4299E1",border:"1px solid rgba(66,153,225,.12)"}}>DIRECTIONS FROM STN 92</a><a href={`https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${inc.lat},${inc.lng}`} target="_blank" rel="noopener" className="text-center mono text-[11px] font-bold py-2 px-3 rounded" style={{background:"rgba(72,187,120,.08)",color:"#48BB78",border:"1px solid rgba(72,187,120,.12)"}}>STREET VIEW</a></div></div>}
+      <div className="p-3"><div className="pn p-3 space-y-2" style={{borderLeft:`3px solid ${cc}`}}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{background:"#2D7FF9",animation:"lp 1.5s infinite"}}/><span className="text-xs font-bold" style={{color:"#2D7FF9"}}>INTELLIGENCE</span></div><div className="grid grid-cols-2 gap-2"><div className="p-2 rounded" style={{background:"#080D18"}}><div className="mono text-[7px] text-gray-500 mb-1">BUREAU LOAD</div><Sp d={bHist} thr={6}/></div><div className="p-2 rounded" style={{background:"#080D18"}}><div className="mono text-[7px] text-gray-500 mb-1">CITYWIDE</div><Sp d={history} thr={10}/></div></div>{ai.map((l,i)=><div key={i} className="flex items-start gap-2"><span className="mono text-[10px]" style={{color:i===0?cc:"#5B9BFA"}}>▸</span><span className="text-[12px]" style={{color:i===0?"#E8ECF2":"#7A879C"}}>{l}</span></div>)}</div></div>
+      <div className="px-3 pb-3 grid grid-cols-3 gap-2">{[["TYPE",TYPE_LABELS[inc.type]||inc.type],["TIME",formatTime(inc.time)],["UNITS",String(inc.units.length)]].map(([l,v])=><div key={l} className="p-2 rounded" style={{background:"#0A0F1A"}}><div className="mono text-[7px] text-gray-500">{l}</div><div className="mono text-sm text-gray-200 mt-0.5">{v}</div></div>)}</div>
+      <div className="px-3 pb-3 space-y-2">{bs.map(([st,us])=><div key={st}><div className="flex items-center gap-2 mb-1"><div className="w-2 h-2 rounded-full" style={{background:STATUS_COLORS[st]||"#3D4D66"}}/><span className="mono text-[10px] font-bold" style={{color:STATUS_COLORS[st]||"#3D4D66"}}>{STATUS_LABELS[st]||st} — {us.length}</span></div><div className="flex flex-wrap gap-1 ml-4">{us.map((u,i)=><span key={u.id+i} className="mono text-sm font-bold px-2 py-0.5 rounded" style={{color:STATUS_COLORS[u.status]||"#3D4D66",background:`${STATUS_COLORS[u.status]||"#3D4D66"}10`}}>{u.id}</span>)}</div></div>)}</div>
     </div>
   </div>;
 }
@@ -149,18 +143,27 @@ export default function App(){
   const wc=(w:number)=>w>45?"#E53E3E":w>30?"#ECC94B":"#48BB78";
   const sc=(s:Hospital["status"])=>s==="OPEN"?"#48BB78":s==="ED SATURATION"?"#ECC94B":"#E53E3E";
 
-  if(sel)return<><H live={live} total={total} lf={lastFetch} bu={bureaus}/><Detail inc={sel} incidents={incidents} history={history} onClose={()=>setSel(null)}/></>;
+  // System strain: % of total stations with committed units
+  const strain=Math.round((STN.length>0?STN.filter(s=>{const b=new Set<number>();incidents.forEach(inc=>inc.units.forEach(u=>{let n=0;if(u.id.startsWith("RA"))n=parseInt(u.id.replace(/^RA/,"").replace(/^8(\d{2})$/,"$1"))||parseInt(u.id.replace(/^RA/,""))||0;if(u.id.startsWith("E"))n=parseInt(u.id.replace(/^E/,""))||0;if(u.id.startsWith("T"))n=parseInt(u.id.replace(/^T/,""))||0;if(n>0)b.add(n);}));return b.has(s.n);}).length/STN.length:0)*100);
+
+  if(sel)return<><H live={live} total={total} bu={bureaus}/><Detail inc={sel} incidents={incidents} history={history} onClose={()=>setSel(null)}/></>;
 
   return<div className="flex flex-col" style={{background:"#04070D",minHeight:"100vh"}}>
-    <H live={live} total={total} lf={lastFetch} bu={bureaus}/>
+    <H live={live} total={total} bu={bureaus}/>
     {alerts.length>0&&<div className="flex-shrink-0 px-4 py-1 flex items-center gap-2" style={{borderBottom:"1px solid #1A2744"}}><span className="mono text-[9px] font-bold flex-shrink-0" style={{color:"#ECC94B"}}>⚡</span><div className="flex-1 overflow-hidden whitespace-nowrap"><div className="inline-block" style={{animation:"tk 25s linear infinite"}}>{[...alerts,...alerts].map((a,i)=><span key={i} className="mono text-[10px] mx-5" style={{color:a.s==="h"?"#E53E3E":"#7A879C"}}>{a.s==="h"?"🔴":"🔵"} {a.t}</span>)}</div></div></div>}
 
     <div className="flex-1 overflow-auto">
-      {/* AI Engine */}
+      {/* OPERATIONAL STATUS — real metrics that matter */}
       <div className="p-3 pb-2"><div className="pn overflow-hidden" style={{borderTop:"2px solid #2D7FF9"}}>
-        <div className="flex items-center justify-between px-4 py-1.5" style={{borderBottom:"1px solid #1A2744"}}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{background:"#2D7FF9",animation:"lp 1.5s infinite"}}/><span className="text-sm font-bold" style={{color:"#2D7FF9"}}>AI ANALYSIS ENGINE</span></div><span className="mono text-[8px] px-2 py-0.5 rounded" style={{background:"rgba(45,127,249,.06)",color:"#5B9BFA",border:"1px solid rgba(45,127,249,.1)"}}>LIVE</span></div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3"><div><Sp d={history} h={44} thr={10} label="INCIDENT LOAD" val={incidents.length}/></div><div><HrBars incidents={incidents}/></div></div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 px-3 pb-3">{[{l:"EMS",v:st.c.ems,c:st.c.ems>5?"#E53E3E":"#48BB78"},{l:"FIRE/TC",v:st.c.fire+st.c.tc,c:st.c.fire>2?"#E53E3E":"#ECC94B"},{l:"UNITS",v:st.tu,c:st.tu>40?"#E53E3E":"#48BB78"},{l:`${wx.temp}° ${wx.fwi}`,v:"WX",c:wx.fwiColor}].map(s=><div key={s.l} className="flex items-center justify-between p-2 rounded" style={{background:"#080D18"}}><span className="mono text-[8px] text-gray-500">{s.l}</span><span className="mono text-sm font-bold" style={{color:s.c}}>{s.v}</span></div>)}</div>
+        <div className="flex items-center justify-between px-4 py-1.5" style={{borderBottom:"1px solid #1A2744"}}><div className="flex items-center gap-2"><div className="w-2 h-2 rounded-full" style={{background:"#2D7FF9",animation:"lp 1.5s infinite"}}/><span className="text-sm font-bold" style={{color:"#2D7FF9"}}>OPERATIONAL STATUS</span></div><span className="mono text-[8px] px-2 py-0.5 rounded" style={{background:"rgba(45,127,249,.06)",color:"#5B9BFA",border:"1px solid rgba(45,127,249,.1)"}}>LIVE</span></div>
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-2 p-3">
+          <div className="p-2 rounded flex items-center justify-between" style={{background:"#080D18"}}><div><div className="mono text-[7px] text-gray-500">SYSTEM STRAIN</div><div className="mono text-xl font-bold" style={{color:strain>30?"#E53E3E":strain>15?"#ECC94B":"#48BB78"}}>{strain}%</div></div><Sp d={history.map(t=>Math.round(t/STN.length*100*3))} h={24} thr={30}/></div>
+          <div className="p-2 rounded flex items-center justify-between" style={{background:"#080D18"}}><div><div className="mono text-[7px] text-gray-500">INCIDENTS</div><div className="mono text-xl font-bold" style={{color:incidents.length>8?"#E53E3E":"#48BB78"}}>{incidents.length}</div></div><Sp d={history} h={24} thr={10}/></div>
+          <div className="p-2 rounded" style={{background:"#080D18"}}><div className="mono text-[7px] text-gray-500">UNITS</div><div className="flex items-baseline gap-1"><span className="mono text-xl font-bold" style={{color:"#48BB78"}}>{st.tu}</span><span className="mono text-[9px] text-gray-500">{st.os} OS · {st.er} ER</span></div></div>
+          <div className="p-2 rounded" style={{background:"#080D18"}}><div className="mono text-[7px] text-gray-500">AVG WALL TIME</div><div className="mono text-xl font-bold" style={{color:avgW>30?"#E53E3E":avgW>20?"#ECC94B":"#48BB78"}}>{avgW}m</div></div>
+          <div className="p-2 rounded" style={{background:"#080D18"}}><div className="mono text-[7px] text-gray-500">AB-40 VIOLATIONS</div><div className="mono text-xl font-bold" style={{color:viol?"#E53E3E":"#48BB78"}}>{viol}</div></div>
+          <div className="p-2 rounded" style={{background:"#080D18"}}><div className="mono text-[7px] text-gray-500">FIRE WX</div><div className="mono text-lg font-bold text-white">{wx.temp}°<span className="text-sm ml-1" style={{color:wx.fwiColor}}>{wx.fwi}</span></div></div>
+        </div>
       </div></div>
 
       {/* Hospitals */}
@@ -170,24 +173,16 @@ export default function App(){
       <div className="px-3 pb-2"><div className="pn px-4 py-2 flex items-center gap-4 flex-wrap" style={{borderLeft:"3px solid #A855F7"}}><span className="mono text-[9px] font-bold text-gray-500 tracking-widest">RA TRANSPORTS</span>{[{l:"WALL",v:atW.length,c:"#A855F7"},{l:"ENRT",v:enR.length,c:"#4299E1"},{l:"AVG",v:`${avgW}m`,c:avgW>30?"#E53E3E":"#48BB78"},{l:"AB-40",v:viol,c:viol?"#E53E3E":"#48BB78"},{l:"ALS/BLS",v:`${trans.filter(t=>t.level==="ALS").length}/${trans.filter(t=>t.level==="BLS").length}`,c:"#7A879C"}].map(s=><div key={s.l} className="flex items-center gap-1"><span className="mono text-[8px] text-gray-500">{s.l}</span><span className="mono text-sm font-bold" style={{color:s.c}}>{s.v}</span></div>)}<div className="hidden xl:flex items-center gap-3 ml-auto">{atW.concat(enR).slice(0,5).map(t=><div key={t.unit} className="flex items-center gap-1"><span className="mono text-[10px] font-bold" style={{color:t.level==="ALS"?"#ED8936":"#4299E1"}}>{t.unit}</span><span className="mono text-[9px] text-gray-500">{t.hospital}</span>{t.wallTime>0&&<span className="mono text-[10px] font-bold" style={{color:t.wallTime>30?"#E53E3E":"#48BB78"}}>{t.wallTime}m</span>}</div>)}</div></div></div>
 
       {/* Incidents + Maps */}
-      <div className="px-3 pb-3 flex gap-2" style={{minHeight:380}}>
+      <div className="px-3 pb-3 flex gap-2" style={{minHeight:400}}>
         <div className="flex-1 flex flex-col min-w-0">
           <div className="flex gap-1 mb-1.5 flex-wrap">{(["all","ems","fire","tc","hazmat","rescue"] as const).map(f=>{const cnt=f==="all"?incidents.length:st.c[f];const act=flt===f;return<button key={f} onClick={()=>setFlt(f)} className={`px-2 py-0.5 rounded mono text-[9px] font-bold ${act?"text-white":"text-gray-500"}`} style={{background:act?`${f==="all"?"#2D7FF9":CATEGORY_COLORS[f as IncidentCategory]}15`:"#0E1525",border:`1px solid ${act?`${f==="all"?"#2D7FF9":CATEGORY_COLORS[f as IncidentCategory]}25`:"#1A2744"}`}}>{f==="all"?"ALL":CATEGORY_LABELS[f as IncidentCategory]}{cnt>0&&<span className="ml-1 text-gray-600">{cnt}</span>}</button>;})}</div>
-          <div className="flex-1 overflow-auto space-y-1">{fltd.map((inc,i)=>{const cat=getCategory(inc.type),ms=getMostActiveStatus(inc.units),sc2=STATUS_COLORS[ms]||"#3D4D66",el=elapsedMinutes(inc.time),hv=inc.units.length>=6;return<div key={inc.id||i} onClick={()=>setSel(inc)} className="ir pn rounded-lg px-3 py-2.5 flex items-center gap-3 fi" style={{animationDelay:`${Math.min(i*15,150)}ms`,borderLeftColor:CATEGORY_COLORS[cat]}}>
-            <div className="w-11 text-center flex-shrink-0"><div className="mono text-sm font-bold text-gray-300">{formatTime(inc.time)}</div><div className="mono text-[8px] text-gray-600">{el}m</div></div>
-            <span className={`flex-shrink-0 px-2 py-0.5 rounded mono text-[10px] font-bold c${cat[0]}`}>{TYPE_SHORT[inc.type]||inc.type}</span>
-            <div className="flex-1 min-w-0"><div className={`text-sm truncate ${hv?"text-white font-semibold":"text-gray-200"}`}>{formatAddress(inc.addr)}</div><div className="flex gap-1 mt-0.5">{inc.units.slice(0,4).map((u,j)=><span key={u.id+j} className="mono text-[9px] font-bold px-1 rounded" style={{color:STATUS_COLORS[u.status]||"#3D4D66",background:`${STATUS_COLORS[u.status]||"#3D4D66"}0D`}}>{u.id}</span>)}{inc.units.length>4&&<span className="mono text-[9px] text-gray-600">+{inc.units.length-4}</span>}</div></div>
-            <div className="flex-shrink-0 text-right"><div className="mono text-[11px] font-bold" style={{color:sc2}}>{STATUS_LABELS[ms]||ms}</div><div className="mono text-[9px] text-gray-500">{inc.units.length}u</div></div>
-          </div>;})}
+          <div className="flex-1 overflow-auto space-y-1">{fltd.map((inc,i)=>{const cat=getCategory(inc.type),ms=getMostActiveStatus(inc.units),sc2=STATUS_COLORS[ms]||"#3D4D66",el=elapsedMinutes(inc.time),hv=inc.units.length>=6;return<div key={inc.id||i} onClick={()=>setSel(inc)} className="ir pn rounded-lg px-3 py-2.5 flex items-center gap-3 fi" style={{animationDelay:`${Math.min(i*15,150)}ms`,borderLeftColor:CATEGORY_COLORS[cat]}}><div className="w-11 text-center flex-shrink-0"><div className="mono text-sm font-bold text-gray-300">{formatTime(inc.time)}</div><div className="mono text-[8px] text-gray-600">{el}m</div></div><span className={`flex-shrink-0 px-2 py-0.5 rounded mono text-[10px] font-bold c${cat[0]}`}>{TYPE_SHORT[inc.type]||inc.type}</span><div className="flex-1 min-w-0"><div className={`text-sm truncate ${hv?"text-white font-semibold":"text-gray-200"}`}>{formatAddress(inc.addr)}</div><div className="flex gap-1 mt-0.5">{inc.units.slice(0,4).map((u,j)=><span key={u.id+j} className="mono text-[9px] font-bold px-1 rounded" style={{color:STATUS_COLORS[u.status]||"#3D4D66",background:`${STATUS_COLORS[u.status]||"#3D4D66"}0D`}}>{u.id}</span>)}{inc.units.length>4&&<span className="mono text-[9px] text-gray-600">+{inc.units.length-4}</span>}</div></div><div className="flex-shrink-0 text-right"><div className="mono text-[11px] font-bold" style={{color:sc2}}>{STATUS_LABELS[ms]||ms}</div><div className="mono text-[9px] text-gray-500">{inc.units.length}u</div></div></div>;})}
             {!fltd.length&&<div className="pn rounded-lg p-8 text-center text-sm text-gray-500">No active incidents</div>}
           </div>
         </div>
-        <div className="hidden lg:flex flex-col w-5/12 gap-2 flex-shrink-0">
-          <HMap title="RA AVAILABILITY" type="RA" incidents={incidents}/>
-          <HMap title="TRUCK / ENGINE" type="TE" incidents={incidents}/>
-        </div>
+        <div className="hidden lg:flex flex-col w-5/12 gap-2 flex-shrink-0"><HMap title="RA AVAILABILITY" type="RA" incidents={incidents}/><HMap title="TRUCK / ENGINE" type="TE" incidents={incidents}/></div>
       </div>
     </div>
-    <footer className="flex-shrink-0 px-4 py-1 flex items-center justify-between" style={{borderTop:"1px solid #1A2744"}}><span className={`mono text-[9px] font-bold ${live?"text-emerald-400":"text-amber-400"}`}>● FIREDASH v16.0</span><span className="mono text-[9px] text-gray-600">APOT SOLUTIONS, INC.</span></footer>
+    <footer className="flex-shrink-0 px-4 py-1 flex items-center justify-between" style={{borderTop:"1px solid #1A2744"}}><span className={`mono text-[9px] font-bold ${live?"text-emerald-400":"text-amber-400"}`}>● FIREDASH v17.0</span><span className="mono text-[9px] text-gray-600">APOT SOLUTIONS, INC.</span></footer>
   </div>;
 }
