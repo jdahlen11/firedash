@@ -3,18 +3,22 @@
 @tailwind utilities;
 
 :root {
-  --bg-deep: #0B0F19;
-  --bg-surface: #111827;
-  --bg-card: #1F2937;
-  --border: #374151;
-  --text-primary: #F9FAFB;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
-  --accent-blue: #3B82F6;
-  --accent-emerald: #10B981;
-  --accent-amber: #F59E0B;
-  --accent-red: #EF4444;
-  --accent-orange: #F97316;
+  --bg-deep: #05080F;
+  --bg-surface: #0A1020;
+  --bg-card: #111A2E;
+  --bg-card-hover: #162040;
+  --border: #1E2D4A;
+  --border-light: #2A3F66;
+  --text-primary: #F0F2F5;
+  --text-secondary: #8B95A8;
+  --text-muted: #4A5568;
+  --accent-blue: #2D7FF9;
+  --accent-cyan: #00D4FF;
+  --accent-emerald: #00E08E;
+  --accent-amber: #FFB020;
+  --accent-red: #FF3B5C;
+  --accent-orange: #FF6B35;
+  --accent-purple: #A855F7;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -25,117 +29,128 @@ html, body, #root {
   color: var(--text-primary);
   font-family: "Outfit", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #4B5563; }
+::-webkit-scrollbar-thumb { background: #1E2D4A; border-radius: 2px; }
 
-/* Glass morphism utility */
-.glass {
-  background: rgba(17, 24, 39, 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(55, 65, 81, 0.5);
+.mono { font-family: "IBM Plex Mono", monospace; }
+
+/* Glass panels */
+.panel {
+  background: linear-gradient(135deg, rgba(10,16,32,0.95), rgba(17,26,46,0.9));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.panel-glow {
+  background: linear-gradient(135deg, rgba(10,16,32,0.95), rgba(17,26,46,0.9));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(45,127,249,0.05), inset 0 1px 0 rgba(255,255,255,0.03);
 }
 
-.glass-strong {
-  background: rgba(31, 41, 55, 0.8);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(55, 65, 81, 0.6);
+/* Animations */
+@keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.8)} }
+@keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+@keyframes slideIn { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+@keyframes glow { 0%{box-shadow:0 0 8px rgba(45,127,249,0.2)} 100%{box-shadow:0 0 24px rgba(45,127,249,0.4)} }
+@keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+@keyframes scanline { 0%{top:0;opacity:.6} 100%{top:100%;opacity:0} }
+
+.live-dot { animation: livePulse 2s ease-in-out infinite; }
+.fade-in { animation: fadeIn .4s ease-out both; }
+.slide-in { animation: slideIn .3s ease-out both; }
+
+/* Incident row */
+.inc-row {
+  transition: all .15s ease;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.inc-row:hover {
+  background: rgba(45,127,249,0.06);
+  border-left-color: var(--accent-blue);
 }
 
-/* Mono text */
-.mono { font-family: "IBM Plex Mono", "Consolas", monospace; }
-
-/* Glow effects */
-.glow-blue { box-shadow: 0 0 12px rgba(59, 130, 246, 0.25); }
-.glow-red { box-shadow: 0 0 12px rgba(239, 68, 68, 0.25); }
-.glow-emerald { box-shadow: 0 0 12px rgba(16, 185, 129, 0.25); }
-.glow-amber { box-shadow: 0 0 12px rgba(245, 158, 11, 0.25); }
-
-/* Scan line effect for header */
-.scanline {
+/* KPI Card */
+.kpi {
+  transition: all .2s ease;
   position: relative;
   overflow: hidden;
+}
+.kpi::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  border-radius: 12px 12px 0 0;
+  opacity: 0;
+  transition: opacity .2s;
+}
+.kpi:hover::before { opacity: 1; }
+.kpi:hover { border-color: var(--border-light); }
+
+/* Category badges */
+.cat-ems { background: rgba(255,107,53,0.12); color: #FF6B35; border: 1px solid rgba(255,107,53,0.25); }
+.cat-fire { background: rgba(255,59,92,0.12); color: #FF3B5C; border: 1px solid rgba(255,59,92,0.25); }
+.cat-tc { background: rgba(255,176,32,0.12); color: #FFB020; border: 1px solid rgba(255,176,32,0.25); }
+.cat-hazmat { background: rgba(168,85,247,0.12); color: #A855F7; border: 1px solid rgba(168,85,247,0.25); }
+.cat-rescue { background: rgba(0,212,255,0.12); color: #00D4FF; border: 1px solid rgba(0,212,255,0.25); }
+.cat-other { background: rgba(74,85,104,0.12); color: #8B95A8; border: 1px solid rgba(74,85,104,0.25); }
+
+/* Scrolling ticker */
+.ticker-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ticker-content {
+  display: inline-block;
+  animation: ticker 40s linear infinite;
+}
+
+/* Scanline overlay for header */
+.scanline {
+  position: relative;
 }
 .scanline::after {
   content: "";
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
-  animation: scanline 4s linear infinite;
-}
-@keyframes scanline {
-  0% { top: 0; }
-  100% { top: 100%; }
+  background: linear-gradient(90deg, transparent, rgba(45,127,249,0.15), transparent);
+  animation: scanline 6s linear infinite;
+  pointer-events: none;
 }
 
-/* Pulse dot */
-@keyframes livePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-.live-dot {
-  animation: livePulse 2s ease-in-out infinite;
-}
+/* Status color classes */
+.st-dispatched { color: #FFB020; }
+.st-enroute { color: #2D7FF9; }
+.st-onscene { color: #FF3B5C; }
+.st-transport { color: #A855F7; }
+.st-hospital { color: #00D4FF; }
+.st-available { color: #00E08E; }
 
-/* Stagger animation for list items */
-.stagger-item {
-  animation: slideUp 0.3s ease-out both;
-}
-
-/* Incident type badge colors */
-.badge-ems { background: rgba(249, 115, 22, 0.15); color: #F97316; border: 1px solid rgba(249, 115, 22, 0.3); }
-.badge-fire { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); }
-.badge-tc { background: rgba(234, 179, 8, 0.15); color: #EAB308; border: 1px solid rgba(234, 179, 8, 0.3); }
-.badge-other { background: rgba(107, 114, 128, 0.15); color: #9CA3AF; border: 1px solid rgba(107, 114, 128, 0.3); }
-.badge-hazmat { background: rgba(168, 85, 247, 0.15); color: #A855F7; border: 1px solid rgba(168, 85, 247, 0.3); }
-
-/* Status badges */
-.status-dispatched { color: #F59E0B; }
-.status-enroute { color: #3B82F6; }
-.status-onscene { color: #EF4444; }
-.status-transport { color: #A855F7; }
-.status-hospital { color: #06B6D4; }
-.status-available { color: #10B981; }
-
-/* Tab active indicator */
-.tab-active {
+/* Detail view banner */
+.detail-banner {
   position: relative;
+  overflow: hidden;
 }
-.tab-active::after {
+.detail-banner::after {
   content: "";
   position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--accent-blue);
-  border-radius: 1px 1px 0 0;
+  bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor, transparent);
+  opacity: 0.3;
 }
 
-/* KPI card hover effect */
-.kpi-card {
-  transition: all 0.2s ease;
+/* Polymarket chart tooltip */
+.chart-dot {
+  transition: all .15s ease;
 }
-.kpi-card:hover {
-  border-color: rgba(59, 130, 246, 0.4);
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.1);
-}
-
-/* Incident row hover */
-.incident-row {
-  transition: all 0.15s ease;
-}
-.incident-row:hover {
-  background: rgba(59, 130, 246, 0.06) !important;
+.chart-dot:hover {
+  r: 4;
+  filter: drop-shadow(0 0 6px currentColor);
 }
