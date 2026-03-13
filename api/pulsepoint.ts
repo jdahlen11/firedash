@@ -4,23 +4,38 @@ import*as https from'https';
 
 const LAFD=['LAFDC','LAFDS','LAFDV','LAFDW'];
 
-// Password from PulsePoint JS: "CommonIncidents" → "tombrady5rings"
 const e='CommonIncidents';
 const PK=e[13]+e[1]+e[2]+'brady'+'5'+'r'+e.toLowerCase()[6]+e[5]+'gs';
 
 function get(u:string):Promise<string>{
   return new Promise((resolve,reject)=>{
     const url = new URL(u);
-    const req=https.get(u,{
+    const options = {
+      hostname: url.hostname,
+      path: url.pathname + url.search,
+      port: 443,
+      method: 'GET',
       headers:{
-        'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Accept':'application/json,text/plain,*/*',
-        'Accept-Language':'en-US,en;q=0.9',
-        'Referer':'https://web.pulsepoint.org/',
-        'Origin':'https://web.pulsepoint.org',
-        'Host': url.hostname,
+        'Accept': '*/*',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Content-Type': 'application/json',
+        'Origin': 'https://web.pulsepoint.org',
+        'Referer': 'https://web.pulsepoint.org/',
+        'Sec-Ch-Ua': '"Not:A-Brand";v="99", "Google Chrome";v="145", "Chromium";v="145"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'empty',
+        'Sec-Fetch-Mode': 'cors',
+        'Sec-Fetch-Site': 'same-site',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Safari/537.36',
       }
-    },res=>{
+    };
+    const req=https.get(options,res=>{
+      // Follow redirects
+      if(res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location){
+        get(res.headers.location).then(resolve).catch(reject);
+        return;
+      }
       let d='';
       res.on('data',c=>d+=c);
       res.on('end',()=>resolve(d));
@@ -35,12 +50,12 @@ function dec(raw:string):{data:any;error?:string}{
   try{
     const j=JSON.parse(raw);
 
-    // If response has incidents directly (unencrypted new API)
-    if(j.incidents) return {data: j};
+    // Unencrypted response
+    if(j.incidents && !j.ct) return {data: j};
     if(j.active) return {data: {incidents: j}};
 
-    // Encrypted response (ct/iv/s format)
-    if(!j.ct)return{data:null,error:'no ct field in response'};
+    // Encrypted (ct/iv/s)
+    if(!j.ct)return{data:null,error:'no ct field'};
 
     const ct=Buffer.from(j.ct,'base64');
     const iv=Buffer.from(j.iv,'hex');
@@ -65,16 +80,12 @@ function dec(raw:string):{data:any;error?:string}{
     let out=Buffer.concat([decipher.update(ct),decipher.final()]);
 
     const padLen=out[out.length-1];
-    if(padLen>0&&padLen<=16){
-      out=out.subarray(0,out.length-padLen);
-    }
+    if(padLen>0&&padLen<=16) out=out.subarray(0,out.length-padLen);
 
     let str=out.toString('utf8');
     const firstQ=str.indexOf('"');
     const lastQ=str.lastIndexOf('"');
-    if(firstQ>=0&&lastQ>firstQ){
-      str=str.substring(firstQ+1,lastQ);
-    }
+    if(firstQ>=0&&lastQ>firstQ) str=str.substring(firstQ+1,lastQ);
     str=str.replace(/\\"/g,'"');
 
     return{data:JSON.parse(str)};
@@ -91,26 +102,16 @@ export default async function handler(req:VercelRequest,res:VercelResponse){
 
   try{
     const results=await Promise.allSettled(LAFD.map(async id=>{
-      // Try new API endpoint first, fall back to legacy
-      let raw = '';
-      let endpoint = '';
-      try {
-        endpoint = `https://api.pulsepoint.org/v1/webapp?resource=incidents&agencyid=${id}`;
-        raw = await get(endpoint);
-        // Check if we got HTML instead of JSON
-        if(raw.trimStart().startsWith('<')){
-          throw new Error('got HTML, trying legacy');
-        }
-      } catch {
-        try {
-          endpoint = `https://web.pulsepoint.org/DB/giba.php?agency_id=${id}`;
-          raw = await get(endpoint);
-          if(raw.trimStart().startsWith('<')){
-            return{id,incidents:[],error:'both endpoints returned HTML',rawLen:raw.length,rawStart:raw.substring(0,200)};
-          }
-        } catch(e2:any) {
-          return{id,incidents:[],error:e2.message,rawLen:0,rawStart:''};
-        }
+      const endpoint=`https://api.pulsepoint.org/v1/webapp?resource=incidents&agencyid=${id}`;
+      let raw='';
+      try{
+        raw=await get(endpoint);
+      }catch(e:any){
+        return{id,incidents:[],error:e.message,rawLen:0,rawStart:''};
+      }
+
+      if(raw.trimStart().startsWith('<')){
+        return{id,incidents:[],error:'got HTML instead of JSON',rawLen:raw.length,rawStart:raw.substring(0,200)};
       }
 
       const{data,error}=dec(raw);
@@ -126,9 +127,7 @@ export default async function handler(req:VercelRequest,res:VercelResponse){
     for(const r of results){
       if(r.status==='fulfilled'){
         const v=r.value;
-        if(v.error){
-          errors.push({id:v.id,error:v.error,rawLen:v.rawLen,rawStart:(v as any).rawStart});
-        }
+        if(v.error) errors.push({id:v.id,error:v.error,rawLen:v.rawLen,rawStart:(v as any).rawStart});
         if(v.incidents.length){
           bureaus[v.id]=v.incidents.length;
           for(const i of v.incidents){
