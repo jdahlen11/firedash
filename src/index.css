@@ -2,73 +2,32 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --bg-deep: #04070D;
-  --bg-surface: #0A0F1A;
-  --bg-card: #0E1525;
-  --border: #1A2744;
-  --border-bright: #253660;
-  --text-1: #E8ECF2;
-  --text-2: #7A879C;
-  --text-3: #3D4D66;
-  --blue: #2D7FF9;
-  --cyan: #00D4FF;
-  --green: #00E08E;
-  --amber: #FFB020;
-  --red: #FF3B5C;
-  --orange: #FF6B35;
-  --purple: #A855F7;
-}
-
+:root{--bg:#04070D;--s1:#0A0F1A;--s2:#0E1525;--bd:#1A2744;--bd2:#253660;--t1:#E8ECF2;--t2:#7A879C;--t3:#3D4D66;--blue:#2D7FF9;--cyan:#00D4FF;--green:#00E08E;--amber:#FFB020;--red:#FF3B5C;--orange:#FF6B35;--purple:#A855F7}
 *{box-sizing:border-box;margin:0;padding:0}
-html,body,#root{height:100%;background:var(--bg-deep);color:var(--text-1);font-family:"Outfit",system-ui,sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+html{height:100%;background:var(--bg);color:var(--t1);font-family:"Outfit",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{height:100%;overflow:hidden}
+#root{height:100%;display:flex;flex-direction:column}
+@media(max-width:1024px){body,#root{overflow:auto;height:auto;min-height:100vh}}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#1A2744;border-radius:2px}
 .mono{font-family:"IBM Plex Mono",monospace}
-
-/* Panels */
-.panel{background:linear-gradient(160deg,rgba(10,15,26,.95),rgba(14,21,37,.88));border:1px solid var(--border);border-radius:10px}
-.panel-glow{background:linear-gradient(160deg,rgba(10,15,26,.95),rgba(14,21,37,.88));border:1px solid var(--border);border-radius:10px;box-shadow:0 0 20px rgba(45,127,249,.04),inset 0 1px 0 rgba(255,255,255,.02)}
-
-/* Animations */
-@keyframes livePulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@keyframes gridPulse{0%,100%{opacity:.03}50%{opacity:.06}}
-@keyframes scanH{0%{left:-100%}100%{left:100%}}
-
-.live-dot{animation:livePulse 2s ease-in-out infinite}
-.fade-in{animation:fadeIn .35s ease-out both}
-
-/* Grid overlay for Palantir feel */
-.grid-overlay{position:relative}
-.grid-overlay::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 39px,rgba(26,39,68,.3) 39px,rgba(26,39,68,.3) 40px),repeating-linear-gradient(90deg,transparent,transparent 39px,rgba(26,39,68,.3) 39px,rgba(26,39,68,.3) 40px);pointer-events:none;animation:gridPulse 8s ease-in-out infinite;z-index:0;border-radius:10px}
-
-/* Scan line */
-.scan-h{position:relative;overflow:hidden}
-.scan-h::after{content:"";position:absolute;top:0;bottom:0;width:60%;background:linear-gradient(90deg,transparent,rgba(45,127,249,.04),transparent);animation:scanH 6s ease-in-out infinite;pointer-events:none}
-
-/* Incident row */
-.inc-row{transition:all .12s ease;cursor:pointer;border-left:3px solid transparent}
-.inc-row:hover{background:rgba(45,127,249,.05)!important;border-left-color:var(--blue)}
-
-/* Category badges */
-.cat-ems{background:rgba(255,107,53,.1);color:#FF6B35;border:1px solid rgba(255,107,53,.2)}
-.cat-fire{background:rgba(255,59,92,.1);color:#FF3B5C;border:1px solid rgba(255,59,92,.2)}
-.cat-tc{background:rgba(255,176,32,.1);color:#FFB020;border:1px solid rgba(255,176,32,.2)}
-.cat-hazmat{background:rgba(168,85,247,.1);color:#A855F7;border:1px solid rgba(168,85,247,.2)}
-.cat-rescue{background:rgba(0,212,255,.1);color:#00D4FF;border:1px solid rgba(0,212,255,.2)}
-.cat-other{background:rgba(61,77,102,.1);color:#7A879C;border:1px solid rgba(61,77,102,.2)}
-
-/* Leaflet overrides for dark theme */
+.panel{background:var(--s2);border:1px solid var(--bd);border-radius:10px}
+@keyframes lp{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes tk{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes sh{0%{left:-100%}100%{left:100%}}
+.ld{animation:lp 2s ease-in-out infinite}.fi{animation:fi .3s ease-out both}
+.scan{position:relative;overflow:hidden}.scan::after{content:"";position:absolute;top:0;bottom:0;width:50%;background:linear-gradient(90deg,transparent,rgba(45,127,249,.03),transparent);animation:sh 5s ease-in-out infinite;pointer-events:none}
+.ir{transition:all .1s;cursor:pointer;border-left:3px solid transparent}.ir:hover{background:rgba(45,127,249,.04)!important;border-left-color:var(--blue)}
+.ce{background:rgba(255,107,53,.1);color:#FF6B35;border:1px solid rgba(255,107,53,.2)}
+.cf{background:rgba(255,59,92,.1);color:#FF3B5C;border:1px solid rgba(255,59,92,.2)}
+.ct{background:rgba(255,176,32,.1);color:#FFB020;border:1px solid rgba(255,176,32,.2)}
+.ch{background:rgba(168,85,247,.1);color:#A855F7;border:1px solid rgba(168,85,247,.2)}
+.cr{background:rgba(0,212,255,.1);color:#00D4FF;border:1px solid rgba(0,212,255,.2)}
+.co{background:rgba(61,77,102,.1);color:#7A879C;border:1px solid rgba(61,77,102,.2)}
 .leaflet-container{background:#0A0F1A!important;border-radius:10px}
-.leaflet-tile-pane{filter:brightness(.7) contrast(1.2) saturate(.3) hue-rotate(180deg) invert(1)}
+.leaflet-tile-pane{filter:brightness(.65) contrast(1.3) saturate(.25) hue-rotate(180deg) invert(1)}
 .leaflet-control-zoom a{background:#0E1525!important;color:#7A879C!important;border-color:#1A2744!important}
 .leaflet-control-attribution{display:none!important}
-
-/* Hospital card */
-.hosp-card{transition:all .15s ease}
-.hosp-card:hover{border-color:var(--border-bright);background:rgba(14,21,37,.95)}
-
-/* KPI hover */
-.kpi{transition:border-color .2s,box-shadow .2s}
-.kpi:hover{border-color:var(--border-bright);box-shadow:0 0 25px rgba(45,127,249,.06)}
+.leaflet-popup-content-wrapper{background:#0E1525!important;color:#E8ECF2!important;border:1px solid #1A2744!important;border-radius:8px!important;box-shadow:0 4px 20px rgba(0,0,0,.5)!important}
+.leaflet-popup-tip{background:#0E1525!important}
+.hc{transition:all .15s}.hc:hover{border-color:var(--bd2)}
