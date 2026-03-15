@@ -1,5 +1,5 @@
 import{useState,useEffect,useCallback,useRef,useMemo}from"react";
-import{fetchWallTimeHospitalMetrics,distMilesFromStn92}from"./lib/walltime";
+import{fetchWallTimeHospitalMetrics,distMilesFromStn92,haversineKm}from"./lib/walltime";
 
 export interface Unit{id:string;status:string}
 export interface Incident{id:string;type:string;time:string;addr:string;lat:string;lng:string;agency:string;units:Unit[]}
@@ -15,7 +15,7 @@ export const RA_FLEET:RAUnit[]=[
 export const RA_STATS={total:RA_FLEET.length,als:RA_FLEET.filter(r=>r.level==="ALS").length,bls:RA_FLEET.filter(r=>r.level==="BLS").length};
 
 // ─── Hospitals (live from WallTime Supabase) ─────────────────────────
-export interface Hospital{name:string;short:string;status:"OPEN"|"ED SATURATION"|"DIVERT"|"CLOSED";wait:number;atWall:number;inbound:number;designations:string[];dist:number}
+export interface Hospital{name:string;short:string;status:"OPEN"|"ED SATURATION"|"DIVERT"|"CLOSED";wait:number;atWall:number;inbound:number;designations:string[];dist:number;lat:number;lng:number}
 
 function deriveStatus(avgWait:number,sampleCount:number,atWall:number):"OPEN"|"ED SATURATION"|"DIVERT"|"CLOSED"{
   if(sampleCount===0&&atWall===0)return"OPEN";
@@ -39,6 +39,8 @@ export function useHospitals(){
         inbound:0,
         designations:m.designations,
         dist:distMilesFromStn92(m.lat,m.lng),
+        lat:m.lat,
+        lng:m.lng,
       })));
       setLastFetch(new Date());
     }catch{}
@@ -47,28 +49,60 @@ export function useHospitals(){
   return{hospitals:h,lastFetch};
 }
 
-// ─── RA Transports (simulated WallTime) ─────────────────────────────
+// ─── RA Transports (derived from live PulsePoint incidents) ──────────
+// RA units in "Transport" or "TransportArrived/AtHospital" status are
+// matched to the nearest hospital to the incident origin coordinates.
+// This eliminates geographic nonsense like RA833 (South Central) → St. Johns (Santa Monica).
 export interface RATransport{unit:string;level:"ALS"|"BLS";hospital:string;wallTime:number;status:"EN ROUTE"|"AT HOSPITAL"|"AVAILABLE";chief:string}
-const CC=["CHEST PAIN","DYSPNEA","FALL","SYNCOPE","ABD PAIN","ALTERED MS","SEIZURE","ALLERGIC RXN","BACK PAIN","HEADACHE","DIABETIC","OD","LACERATION"];
-const HOSPS=["UCLA RR","CEDARS","KAISER WLA","ST JOHNS"];
 
-function genTransports():RATransport[]{
-  const n=Math.floor(Math.random()*6+5);
-  return[...RA_FLEET].sort(()=>Math.random()-.5).slice(0,n).map(ra=>{
-    const st=Math.random()>.4?"AT HOSPITAL":Math.random()>.3?"EN ROUTE":"AVAILABLE";
-    return{unit:ra.id,level:ra.level,hospital:HOSPS[Math.floor(Math.random()*HOSPS.length)],wallTime:st==="AT HOSPITAL"?Math.floor(Math.random()*85+5):0,status:st,chief:CC[Math.floor(Math.random()*CC.length)]};
-  });
+function nearestHospital(incLat:number,incLng:number,hospitals:Hospital[]):Hospital|null{
+  if(!hospitals.length)return null;
+  let best=hospitals[0],bestDist=Infinity;
+  for(const h of hospitals){
+    if(!h.lat||!h.lng)continue;
+    const d=haversineKm(incLat,incLng,h.lat,h.lng);
+    if(d<bestDist){bestDist=d;best=h;}
+  }
+  return best;
 }
 
-export function useTransports(){
-  const[t,setT]=useState<RATransport[]>(genTransports);
-  const[lastFetch,setLastFetch]=useState<Date|null>(()=>new Date());
-  useEffect(()=>{
-    const i=setInterval(()=>{setT(p=>p.map(t=>({...t,wallTime:t.status==="AT HOSPITAL"?t.wallTime+Math.floor(Math.random()*3):0,status:Math.random()>.96?(t.status==="EN ROUTE"?"AT HOSPITAL":t.status==="AT HOSPITAL"?"AVAILABLE":"EN ROUTE"):t.status})));setLastFetch(new Date());},8000);
-    const j=setInterval(()=>{setT(genTransports());setLastFetch(new Date());},90000);
-    return()=>{clearInterval(i);clearInterval(j);};
-  },[]);
-  return{transports:t,lastFetch};
+// BLS units: station numbers 800–899 and 900–999 series
+function isRaBLS(id:string):boolean{const n=parseInt(id.replace(/^RA/,""));return(n>=800&&n<=899)||(n>=900&&n<=999);}
+
+export function useTransports(incidents:Incident[],hospitals:Hospital[]):{transports:RATransport[];lastFetch:Date|null}{
+  const transports=useMemo(()=>{
+    if(!hospitals.length)return[];
+    const seen=new Set<string>();
+    const result:RATransport[]=[];
+    for(const inc of incidents){
+      const incLat=parseFloat(inc.lat),incLng=parseFloat(inc.lng);
+      if(!incLat||!incLng||isNaN(incLat)||isNaN(incLng))continue;
+      for(const unit of inc.units){
+        if(!unit.id.startsWith("RA"))continue;
+        if(seen.has(unit.id))continue;
+        const atHosp=unit.status==="TransportArrived"||unit.status==="AtHospital";
+        const enRoute=unit.status==="Transport";
+        if(!atHosp&&!enRoute)continue;
+        seen.add(unit.id);
+        const hosp=nearestHospital(incLat,incLng,hospitals);
+        if(!hosp)continue;
+        // Wall time estimate: elapsed since call minus ~30min for response+transport; minimum 0
+        const elapsed=elapsedMinutes(inc.time);
+        const wallTime=atHosp?Math.max(0,elapsed-30):0;
+        result.push({
+          unit:unit.id,
+          level:isRaBLS(unit.id)?"BLS":"ALS",
+          hospital:hosp.short,
+          wallTime,
+          status:atHosp?"AT HOSPITAL":"EN ROUTE",
+          chief:TYPE_LABELS[inc.type]||inc.type,
+        });
+      }
+    }
+    return result;
+  },[incidents,hospitals]);
+  const lastFetch=useMemo(()=>incidents.length?new Date():null,[incidents]);
+  return{transports,lastFetch};
 }
 
 // ─── Fire Weather ───────────────────────────────────────────────────

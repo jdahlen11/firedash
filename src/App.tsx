@@ -135,7 +135,7 @@ function Detail({inc,incidents,history,onClose}:{inc:Incident;incidents:Incident
 export default function App(){
   const{incidents,total,bureaus,live,lastFetch,lastFetchDate,history}=usePulsePoint();
   const{hospitals:hosp,lastFetch:hospLastFetch}=useHospitals();
-  const{transports:trans,lastFetch:transLastFetch}=useTransports();
+  const{transports:trans,lastFetch:transLastFetch}=useTransports(incidents,hosp);
   const wx=useFireWeather();
   const[sel,setSel]=useState<Incident|null>(null),[flt,setFlt]=useState<IncidentCategory|"all">("all");
   const alerts=useI(incidents);
@@ -169,9 +169,43 @@ export default function App(){
         </div>
       </div></div>
 
-      {/* Hospitals */}
-      <div className="px-3 pb-1 flex items-center justify-between"><span className="mono text-[9px] font-bold text-gray-500 tracking-widest flex items-center gap-1">HOSPITAL STATUS<FreshnessIndicator lastUpdated={hospLastFetch}/></span>{hosp.length>0?<span className="mono text-[8px] px-2 py-0.5 rounded font-bold" style={{background:"rgba(168,85,247,.06)",color:"#A855F7",border:"1px solid rgba(168,85,247,.12)"}}>● WALLTIME LIVE</span>:<span className="mono text-[8px] text-gray-600">CONNECTING…</span>}</div>
-      <div className="px-3 pb-2 grid grid-cols-2 lg:grid-cols-4 gap-2">{hosp.length===0?[...Array(4)].map((_,i)=><div key={i} className="pn px-3 py-2 animate-pulse" style={{borderLeft:"3px solid #1A2744"}}><div className="h-3 w-16 rounded mb-2" style={{background:"#1A2744"}}/><div className="h-8 w-10 rounded" style={{background:"#1A2744"}}/></div>):hosp.map(h=><div key={h.short} className="pn px-3 py-2" style={{borderLeft:`3px solid ${sc(h.status)}`}}><div className="flex justify-between items-start"><span className="text-sm font-bold" style={{color:sc(h.status)}}>{h.short}</span><span className="mono text-[10px] font-bold" style={{color:sc(h.status)}}>{h.status}</span></div><div className="flex items-end justify-between mt-1"><div className="mono text-3xl font-bold leading-none" style={{color:wc(h.wait)}}>{h.wait>0?h.wait:"--"}<span className="text-sm text-gray-500">{h.wait>0?"m":""}</span></div><div className="text-right"><div className="mono text-xs"><span className="text-gray-500">WALL </span><span className="font-bold" style={{color:"#A855F7"}}>{h.atWall}</span></div><div className="mono text-xs"><span className="text-gray-500">24H </span><span className="font-bold" style={{color:"#4299E1"}}>{h.dist}mi</span></div></div></div></div>)}</div>
+      {/* Hospitals — compact diversion intelligence panel */}
+      {(()=>{
+        const diverts=hosp.filter(h=>h.status==="DIVERT").length;
+        const edSat=hosp.filter(h=>h.status==="ED SATURATION").length;
+        const withData=hosp.filter(h=>h.wait>0);
+        const avgAllWait=withData.length?Math.round(withData.reduce((s,h)=>s+h.wait,0)/withData.length):0;
+        const sorted=[...hosp].sort((a,b)=>{const rank=(s:Hospital["status"])=>s==="DIVERT"?0:s==="ED SATURATION"?1:2;const rd=rank(a.status)-rank(b.status);return rd!==0?rd:b.wait-a.wait;});
+        return<div className="px-3 pb-2"><div className="pn overflow-hidden" style={{borderLeft:"3px solid #A855F7"}}>
+          <div className="flex items-center justify-between px-3 py-1.5" style={{borderBottom:"1px solid #1A2744"}}>
+            <div className="flex items-center gap-2"><span className="mono text-[9px] font-bold text-gray-500 tracking-widest flex items-center gap-1">HOSPITAL DIVERSION INTEL<FreshnessIndicator lastUpdated={hospLastFetch}/></span></div>
+            <div className="flex items-center gap-3">
+              {diverts>0&&<span className="mono text-[9px] font-bold" style={{color:"#E53E3E"}}>{diverts} DIVERT</span>}
+              {edSat>0&&<span className="mono text-[9px] font-bold" style={{color:"#ECC94B"}}>{edSat} ED SAT</span>}
+              {avgAllWait>0&&<span className="mono text-[9px] text-gray-500">AVG <span className="text-gray-300">{avgAllWait}m</span></span>}
+              {hosp.length>0?<span className="mono text-[8px] px-1.5 py-0.5 rounded font-bold" style={{background:"rgba(168,85,247,.06)",color:"#A855F7",border:"1px solid rgba(168,85,247,.12)"}}>● LIVE</span>:<span className="mono text-[8px] text-gray-600">CONNECTING…</span>}
+            </div>
+          </div>
+          {hosp.length===0
+            ?<div className="p-2 space-y-1">{[...Array(5)].map((_,i)=><div key={i} className="h-5 rounded animate-pulse" style={{background:"#1A2744"}}/>)}</div>
+            :<div>{sorted.map(h=>{
+              const barPct=Math.min(100,h.wait>0?Math.round(h.wait/60*100):0);
+              const barColor=sc(h.status);
+              const inboundRAs=trans.filter(t=>t.hospital===h.short&&(t.status==="EN ROUTE"||t.status==="AT HOSPITAL")).length;
+              return<div key={h.short} className="flex items-center gap-2 px-3 py-1.5" style={{borderBottom:"1px solid #0E1525"}}>
+                <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{background:barColor}}/>
+                <span className="mono text-[10px] font-bold text-gray-200 w-16 flex-shrink-0 truncate">{h.short}</span>
+                <div className="flex-1 relative h-3 rounded overflow-hidden" style={{background:"#0E1525"}}>
+                  <div className="h-full rounded transition-all duration-700" style={{width:`${barPct}%`,background:`${barColor}60`,minWidth:barPct>0?"4px":"0"}}/>
+                </div>
+                <span className="mono text-[10px] font-bold w-8 text-right flex-shrink-0" style={{color:h.wait>0?wc(h.wait):"#3D4D66"}}>{h.wait>0?`${h.wait}m`:"--"}</span>
+                <span className="mono text-[9px] w-5 text-right flex-shrink-0" style={{color:"#A855F7"}} title="At wall">{h.atWall>0?h.atWall:""}</span>
+                {inboundRAs>0&&<span className="mono text-[9px] flex-shrink-0" style={{color:"#4299E1"}}>↑{inboundRAs}</span>}
+                <span className="mono text-[8px] text-gray-600 w-9 text-right flex-shrink-0">{h.dist}mi</span>
+              </div>;
+            })}</div>}
+        </div></div>;
+      })()}
 
       {/* RA Transports */}
       <div className="px-3 pb-2"><div className="pn px-4 py-2 flex items-center gap-4 flex-wrap" style={{borderLeft:"3px solid #A855F7"}}><span className="mono text-[9px] font-bold text-gray-500 tracking-widest flex items-center gap-1">RA TRANSPORTS<FreshnessIndicator lastUpdated={transLastFetch}/></span>{[{l:"WALL",v:atW.length,c:"#A855F7"},{l:"ENRT",v:enR.length,c:"#4299E1"},{l:"AVG",v:`${avgW}m`,c:avgW>30?"#E53E3E":"#48BB78"},{l:"AB-40",v:viol,c:viol?"#E53E3E":"#48BB78"},{l:"ALS/BLS",v:`${trans.filter(t=>t.level==="ALS").length}/${trans.filter(t=>t.level==="BLS").length}`,c:"#7A879C"}].map(s=><div key={s.l} className="flex items-center gap-1"><span className="mono text-[8px] text-gray-500">{s.l}</span><span className="mono text-sm font-bold" style={{color:s.c}}>{s.v}</span></div>)}<div className="hidden xl:flex items-center gap-3 ml-auto">{atW.concat(enR).slice(0,5).map(t=><div key={t.unit} className="flex items-center gap-1"><span className="mono text-[10px] font-bold" style={{color:t.level==="ALS"?"#ED8936":"#4299E1"}}>{t.unit}</span><span className="mono text-[9px] text-gray-500">{t.hospital}</span>{t.wallTime>0&&<span className="mono text-[10px] font-bold" style={{color:t.wallTime>30?"#E53E3E":"#48BB78"}}>{t.wallTime}m</span>}</div>)}</div></div></div>
