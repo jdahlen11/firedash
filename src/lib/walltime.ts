@@ -36,6 +36,27 @@ export function distMilesFromStn92(lat: number, lng: number): number {
   return Math.round(haversineKm(STN92.lat, STN92.lng, lat, lng) * 0.621371 * 10) / 10;
 }
 
+export interface ActiveWallLive {
+  id: string;
+  incident_id: string;
+  unit_id: string;
+  is_simulated: boolean;
+  current_status: 'DISPATCHED' | 'EN_ROUTE' | 'ON_SCENE' | 'TRANSPORTING' | 'AT_HOSPITAL';
+  destination: string | null;
+  friction_multiplier: number;
+  updated_at: string;
+  lat: number;
+  lng: number;
+}
+
+export async function fetchActiveWallsLive(): Promise<ActiveWallLive[]> {
+  const { data, error } = await wtClient
+    .from('active_walls_live')
+    .select('*');
+  if (error || !data) return [];
+  return data as ActiveWallLive[];
+}
+
 /**
  * Fetches live hospital metrics from WallTime's Supabase:
  * - Hospital directory (name, abbreviation, designations, coordinates)

@@ -1,6 +1,7 @@
 import{useState,useEffect,useMemo}from"react";
 import{usePulsePoint,useHospitals,useTransports,useFireWeather,Incident,Hospital,RATransport,TYPE_LABELS,TYPE_SHORT,STATUS_LABELS,STATUS_COLORS,BUREAU_NAMES,CATEGORY_COLORS,CATEGORY_LABELS,getCategory,getMostActiveStatus,getUnitType,formatTime,formatAddress,elapsedMinutes,IncidentCategory}from"./hooks";
 import FreshnessIndicator from"./components/FreshnessIndicator";
+import HeroIncidentMap from'./components/HeroIncidentMap';
 
 /* ═══ SPARK — small inline, Polymarket style ═══ */
 function Sp({d,h=28,thr=8}:{d:number[];h?:number;thr?:number}){
@@ -168,6 +169,9 @@ export default function App(){
           <div className="p-2 rounded" style={{background:"#080D18"}}><div className="mono text-[7px] text-gray-500">FIRE WX</div><div className="mono text-lg font-bold text-white">{wx.temp}°<span className="text-sm ml-1" style={{color:wx.fwiColor}}>{wx.fwi}</span></div></div>
         </div>
       </div></div>
+
+      {/* Hero Incident Map — live PostGIS unit positions */}
+      <div className="px-3 pb-2"><HeroIncidentMap /></div>
 
       {/* Hospitals — compact diversion intelligence panel */}
       {(()=>{
