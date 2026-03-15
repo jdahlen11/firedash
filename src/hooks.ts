@@ -5,7 +5,7 @@ export interface Unit{id:string;status:string}
 export interface Incident{id:string;type:string;time:string;addr:string;lat:string;lng:string;agency:string;units:Unit[]}
 export type IncidentCategory="ems"|"fire"|"tc"|"hazmat"|"rescue"|"other";
 export interface BureauCounts{[k:string]:number}
-export interface PulsePointData{incidents:Incident[];total:number;bureaus:BureauCounts;live:boolean;lastFetch:string;history:number[]}
+export interface PulsePointData{incidents:Incident[];total:number;bureaus:BureauCounts;live:boolean;lastFetch:string;lastFetchDate:Date|null;history:number[]}
 
 // ─── RA Fleet ───────────────────────────────────────────────────────
 export interface RAUnit{id:string;level:"ALS"|"BLS";station:number}
@@ -26,6 +26,7 @@ function deriveStatus(avgWait:number,sampleCount:number,atWall:number):"OPEN"|"E
 
 export function useHospitals(){
   const[h,setH]=useState<Hospital[]>([]);
+  const[lastFetch,setLastFetch]=useState<Date|null>(null);
   const load=useCallback(async()=>{
     try{
       const metrics=await fetchWallTimeHospitalMetrics();
@@ -39,10 +40,11 @@ export function useHospitals(){
         designations:m.designations,
         dist:distMilesFromStn92(m.lat,m.lng),
       })));
+      setLastFetch(new Date());
     }catch{}
   },[]);
   useEffect(()=>{load();const i=setInterval(load,30000);return()=>clearInterval(i);},[load]);
-  return h;
+  return{hospitals:h,lastFetch};
 }
 
 // ─── RA Transports (simulated WallTime) ─────────────────────────────
@@ -60,12 +62,13 @@ function genTransports():RATransport[]{
 
 export function useTransports(){
   const[t,setT]=useState<RATransport[]>(genTransports);
+  const[lastFetch,setLastFetch]=useState<Date|null>(()=>new Date());
   useEffect(()=>{
-    const i=setInterval(()=>{setT(p=>p.map(t=>({...t,wallTime:t.status==="AT HOSPITAL"?t.wallTime+Math.floor(Math.random()*3):0,status:Math.random()>.96?(t.status==="EN ROUTE"?"AT HOSPITAL":t.status==="AT HOSPITAL"?"AVAILABLE":"EN ROUTE"):t.status})));},8000);
-    const j=setInterval(()=>setT(genTransports()),90000);
+    const i=setInterval(()=>{setT(p=>p.map(t=>({...t,wallTime:t.status==="AT HOSPITAL"?t.wallTime+Math.floor(Math.random()*3):0,status:Math.random()>.96?(t.status==="EN ROUTE"?"AT HOSPITAL":t.status==="AT HOSPITAL"?"AVAILABLE":"EN ROUTE"):t.status})));setLastFetch(new Date());},8000);
+    const j=setInterval(()=>{setT(genTransports());setLastFetch(new Date());},90000);
     return()=>{clearInterval(i);clearInterval(j);};
   },[]);
-  return t;
+  return{transports:t,lastFetch};
 }
 
 // ─── Fire Weather ───────────────────────────────────────────────────
@@ -101,7 +104,7 @@ export function useFireWeather(){
 export const TYPE_LABELS:Record<string,string>={ME:"MEDICAL EMERGENCY",MA:"FIRE ALARM",MCI:"MASS CASUALTY",SF:"STRUCTURE FIRE",RF:"RESIDENTIAL FIRE",CF:"COMMERCIAL FIRE",WSF:"WORKING STRUCTURE",WRF:"WORKING RESIDENTIAL",WCF:"WORKING COMMERCIAL",FULL:"FULL ASSIGNMENT",VF:"VEHICLE FIRE",VEG:"VEGETATION FIRE",WVEG:"WORKING VEGETATION",TC:"TRAFFIC COLLISION",TCE:"EXTRICATION TC",FA:"FIRE ALARM",GAS:"GAS LEAK",EE:"ELECTRICAL EMERGENCY",HMR:"HAZMAT RESPONSE",EX:"EXPLOSION",CHIM:"CHIMNEY FIRE",OF:"OUTSIDE FIRE",FIRE:"FIRE",AF:"APPLIANCE FIRE",PF:"POLE FIRE",ELF:"ELECTRICAL FIRE",WR:"WATER RESCUE",RES:"RESCUE",TR:"TECHNICAL RESCUE",ELR:"ELEVATOR RESCUE",LA:"LIFT ASSIST",SI:"SMOKE INVESTIGATION",OI:"ODOR INVESTIGATION",INV:"INVESTIGATION",WD:"WIRES DOWN",WA:"WIRES ARCING",TD:"TREE DOWN",HC:"HAZARDOUS CONDITION",PS:"PUBLIC SERVICE",PA:"POLICE ASSIST",AED:"AED ALARM",FL:"FLOODING",IFT:"INTERFACILITY TRANSFER"};
 export const TYPE_SHORT:Record<string,string>={ME:"EMS",MA:"FA",MCI:"MCI",SF:"STR",RF:"STR",CF:"STR",WSF:"WSTR",WRF:"WSTR",WCF:"WSTR",FULL:"FULL",VF:"VEH",VEG:"VEG",WVEG:"WVEG",TC:"TC",TCE:"TCX",FA:"FA",GAS:"GAS",EE:"ELEC",HMR:"HAZ",EX:"EXPL",OF:"FIRE",FIRE:"FIRE",AF:"FIRE",WR:"H2O",RES:"RES",TR:"TECH",ELR:"ELEV",LA:"LIFT",SI:"INV",OI:"INV",INV:"INV",WD:"WIRE",TD:"TREE",HC:"HAZ",PS:"PS",PA:"PA",IFT:"IFT",FL:"FLOOD"};
 export const STATUS_LABELS:Record<string,string>={Dispatched:"DISPATCHED",Enroute:"EN ROUTE",OnScene:"ON SCENE",Transport:"TRANSPORT",TransportArrived:"AT HOSPITAL",Available:"AVAILABLE",Cleared:"CLEARED",AtHospital:"AT HOSPITAL"};
-export const STATUS_COLORS:Record<string,string>={Dispatched:"#FFB020",Enroute:"#2D7FF9",OnScene:"#FF3B5C",Transport:"#A855F7",TransportArrived:"#00D4FF",Available:"#00E08E",Cleared:"#3D4D66",AtHospital:"#00D4FF"};
+export const STATUS_COLORS:Record<string,string>={Dispatched:"#FFB020",Enroute:"#5B9CF6",OnScene:"#FF3B5C",Transport:"#A855F7",TransportArrived:"#00D4FF",Available:"#00E08E",Cleared:"#3D4D66",AtHospital:"#00D4FF"};
 export const BUREAU_NAMES:Record<string,string>={LAFDC:"CENTRAL",LAFDS:"SOUTH",LAFDV:"VALLEY",LAFDW:"WEST"};
 export const CATEGORY_COLORS:Record<IncidentCategory,string>={ems:"#FF6B35",fire:"#FF3B5C",tc:"#FFB020",hazmat:"#A855F7",rescue:"#00D4FF",other:"#3D4D66"};
 export const CATEGORY_LABELS:Record<IncidentCategory,string>={ems:"EMS",fire:"FIRE",tc:"TC",hazmat:"HAZMAT",rescue:"RESCUE",other:"OTHER"};
@@ -116,8 +119,8 @@ export function elapsedMinutes(t:string):number{if(!t)return 0;return Math.max(0
 
 // ─── PulsePoint Hook ────────────────────────────────────────────────
 export function usePulsePoint():PulsePointData{
-  const[incidents,setIncidents]=useState<Incident[]>([]);const[total,setTotal]=useState(0);const[bureaus,setBureaus]=useState<BureauCounts>({});const[live,setLive]=useState(false);const[lastFetch,setLastFetch]=useState("");const[history,setHistory]=useState<number[]>([]);const hr=useRef<number[]>([]);
-  const poll=useCallback(async()=>{try{const r=await fetch("/api/pulsepoint");if(!r.ok)throw new Error("err");const d=await r.json();if(d.ok&&d.incidents){setIncidents(d.incidents);setTotal(d.total);setBureaus(d.bureaus||{});setLive(true);setLastFetch(new Date().toLocaleTimeString("en-US",{hour12:false,timeZone:"America/Los_Angeles"}));const n=[...hr.current,d.total].slice(-40);hr.current=n;setHistory(n);}}catch{setLive(false);}},[]); 
+  const[incidents,setIncidents]=useState<Incident[]>([]);const[total,setTotal]=useState(0);const[bureaus,setBureaus]=useState<BureauCounts>({});const[live,setLive]=useState(false);const[lastFetch,setLastFetch]=useState("");const[lastFetchDate,setLastFetchDate]=useState<Date|null>(null);const[history,setHistory]=useState<number[]>([]);const hr=useRef<number[]>([]);
+  const poll=useCallback(async()=>{try{const r=await fetch("/api/pulsepoint");if(!r.ok)throw new Error("err");const d=await r.json();if(d.ok&&d.incidents){setIncidents(d.incidents);setTotal(d.total);setBureaus(d.bureaus||{});setLive(true);const now=new Date();setLastFetch(now.toLocaleTimeString("en-US",{hour12:false,timeZone:"America/Los_Angeles"}));setLastFetchDate(now);const n=[...hr.current,d.total].slice(-40);hr.current=n;setHistory(n);}}catch{setLive(false);}},[]);
   useEffect(()=>{poll();const i=setInterval(poll,25000);return()=>clearInterval(i);},[poll]);
-  return{incidents,total,bureaus,live,lastFetch,history};
+  return{incidents,total,bureaus,live,lastFetch,lastFetchDate,history};
 }

@@ -12,12 +12,12 @@ body{height:100%}
 @keyframes lp{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes tk{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@keyframes gw{0%,100%{box-shadow:0 0 8px rgba(45,127,249,.2)}50%{box-shadow:0 0 20px rgba(45,127,249,.4)}}
+@keyframes gw{0%,100%{box-shadow:0 0 8px rgba(91,156,246,.2)}50%{box-shadow:0 0 20px rgba(91,156,246,.4)}}
 @keyframes rp{0%{r:3;opacity:1}50%{r:5;opacity:.6}100%{r:3;opacity:1}}
 .ld{animation:lp 2s ease-in-out infinite}
 .fi{animation:fi .3s ease-out both}
 .ir{transition:background .1s,border-color .1s;cursor:pointer;border-left:3px solid transparent}
-.ir:hover{background:rgba(45,127,249,.04)!important;border-left-color:#2D7FF9}
+.ir:hover{background:rgba(91,156,246,.04)!important;border-left-color:#5B9CF6}
 .ce{background:rgba(255,107,53,.1);color:#FF6B35;border:1px solid rgba(255,107,53,.2)}
 .cf{background:rgba(255,59,92,.1);color:#FF3B5C;border:1px solid rgba(255,59,92,.2)}
 .ct{background:rgba(255,176,32,.1);color:#FFB020;border:1px solid rgba(255,176,32,.2)}
