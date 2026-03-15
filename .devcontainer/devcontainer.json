@@ -1,0 +1,12 @@
+{
+  "name": "FireDash Core",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "version": "latest"
+    }
+  },
+  "onCreateCommand": "npm install -g bun @anthropic-ai/claude-code mcp-server-cli",
+  "postCreateCommand": "bun install",
+  "remoteUser": "node"
+}
