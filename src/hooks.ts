@@ -1,4 +1,5 @@
 import{useState,useEffect,useCallback,useRef,useMemo}from"react";
+import{fetchWallTimeHospitalMetrics,distMilesFromStn92}from"./lib/walltime";
 
 export interface Unit{id:string;status:string}
 export interface Incident{id:string;type:string;time:string;addr:string;lat:string;lng:string;agency:string;units:Unit[]}
@@ -13,21 +14,34 @@ export const RA_FLEET:RAUnit[]=[
 ];
 export const RA_STATS={total:RA_FLEET.length,als:RA_FLEET.filter(r=>r.level==="ALS").length,bls:RA_FLEET.filter(r=>r.level==="BLS").length};
 
-// ─── Hospitals (simplified for demo) ────────────────────────────────
+// ─── Hospitals (live from WallTime Supabase) ─────────────────────────
 export interface Hospital{name:string;short:string;status:"OPEN"|"ED SATURATION"|"DIVERT"|"CLOSED";wait:number;atWall:number;inbound:number;designations:string[];dist:number}
 
-function genHospitals():Hospital[]{
-  return[
-    {name:"UCLA Ronald Reagan",short:"UCLA RR",status:"OPEN",wait:42,atWall:1,inbound:2,designations:["CSC","EDAP","NICU","SRC","TC","TRAUMA"],dist:2.6},
-    {name:"Cedars-Sinai Medical Center",short:"CEDARS",status:"OPEN",wait:67,atWall:3,inbound:1,designations:["EDAP","SRC","STEMI","TRAUMA"],dist:3.2},
-    {name:"Kaiser West LA",short:"KAISER WLA",status:"OPEN",wait:18,atWall:0,inbound:1,designations:["EDAP","LPS","PSC","SRC"],dist:5.1},
-    {name:"Providence St. John's",short:"ST JOHNS",status:"ED SATURATION",wait:55,atWall:2,inbound:0,designations:["EDAP","SRC","PSC"],dist:7.1},
-  ];
+function deriveStatus(avgWait:number,sampleCount:number,atWall:number):"OPEN"|"ED SATURATION"|"DIVERT"|"CLOSED"{
+  if(sampleCount===0&&atWall===0)return"OPEN";
+  if(avgWait>=60)return"DIVERT";
+  if(avgWait>=35)return"ED SATURATION";
+  return"OPEN";
 }
 
 export function useHospitals(){
-  const[h,setH]=useState<Hospital[]>(genHospitals);
-  useEffect(()=>{const i=setInterval(()=>{setH(p=>p.map(h=>({...h,wait:Math.max(5,h.wait+Math.floor(Math.random()*9-4)),atWall:Math.max(0,h.atWall+(Math.random()>.85?(Math.random()>.5?1:-1):0)),inbound:Math.max(0,h.inbound+(Math.random()>.9?(Math.random()>.5?1:-1):0))})));},12000);return()=>clearInterval(i);},[]);
+  const[h,setH]=useState<Hospital[]>([]);
+  const load=useCallback(async()=>{
+    try{
+      const metrics=await fetchWallTimeHospitalMetrics();
+      setH(metrics.map(m=>({
+        name:m.name,
+        short:m.abbrev,
+        status:deriveStatus(m.avgWaitMinutes,m.sampleCount,m.atWall),
+        wait:m.avgWaitMinutes,
+        atWall:m.atWall,
+        inbound:0,
+        designations:m.designations,
+        dist:distMilesFromStn92(m.lat,m.lng),
+      })));
+    }catch{}
+  },[]);
+  useEffect(()=>{load();const i=setInterval(load,30000);return()=>clearInterval(i);},[load]);
   return h;
 }
 
