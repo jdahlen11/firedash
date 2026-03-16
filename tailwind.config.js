@@ -4,24 +4,25 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["Outfit", "system-ui", "sans-serif"],
-        mono: ["IBM Plex Mono", "Consolas", "monospace"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "SF Mono", "Consolas", "monospace"],
       },
       colors: {
         navy: {
-          950: "#0B0F19",
-          900: "#111827",
-          800: "#1F2937",
-          700: "#374151",
-          600: "#4B5563",
+          950: "#0B1120",
+          900: "#101828",
+          800: "#151F32",
+          700: "#1C2B48",
+          600: "#5A6D8A",
         },
         accent: {
           blue: "#3B82F6",
-          cyan: "#06B6D4",
+          cyan: "#00C2E0",
           emerald: "#10B981",
           amber: "#F59E0B",
           red: "#EF4444",
           orange: "#F97316",
+          indigo: "#818CF8",
         },
       },
       animation: {
@@ -29,6 +30,7 @@ export default {
         "fade-in": "fadeIn 0.4s ease-out",
         "slide-up": "slideUp 0.3s ease-out",
         "glow": "glow 2s ease-in-out infinite alternate",
+        "ping-slow": "ping 2s cubic-bezier(0,0,0.2,1) infinite",
       },
       keyframes: {
         fadeIn: {

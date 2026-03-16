@@ -1,64 +1,162 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import type { SimAlert } from '../lib/simulationTypes';
-
-const MAX_ITEMS = 12;
-const SEVERITY_ICON = {
-  info: Info,
-  warning: AlertTriangle,
-  critical: AlertCircle,
-};
-const SEVERITY_STYLE = {
-  info: 'text-[#0099BF]',
-  warning: 'text-[#F5A623]',
-  critical: 'text-[#E8553C]',
-};
+import { colors, fonts } from '../lib/designTokens';
 
 interface AlertTickerProps {
   alerts: SimAlert[];
   className?: string;
 }
 
+const SEVERITY_ICON = {
+  info:     Info,
+  warning:  AlertTriangle,
+  critical: AlertCircle,
+};
+const SEVERITY_COLOR = {
+  info:     colors.cyan,
+  warning:  colors.amber,
+  critical: colors.red,
+};
+
+const SPEED_PX_PER_FRAME = 0.6; // ~36px/s at 60fps
+
 export default function AlertTicker({ alerts, className = '' }: AlertTickerProps) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const display = alerts.slice(-MAX_ITEMS);
+  const innerRef = useRef<HTMLDivElement>(null);
+  const offsetRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+  const display = alerts.slice(-16);
+
+  const animate = useCallback(() => {
+    const el = innerRef.current;
+    if (!el) {
+      rafRef.current = requestAnimationFrame(animate);
+      return;
+    }
+    const halfWidth = el.scrollWidth / 2;
+    if (halfWidth > 0) {
+      offsetRef.current += SPEED_PX_PER_FRAME;
+      if (offsetRef.current >= halfWidth) {
+        offsetRef.current = 0;
+      }
+      el.style.transform = `translateX(-${offsetRef.current.toFixed(1)}px)`;
+    }
+    rafRef.current = requestAnimationFrame(animate);
+  }, []);
 
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    el.scrollLeft = el.scrollWidth;
-  }, [alerts.length]);
+    rafRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, [animate]);
 
   if (display.length === 0) {
     return (
-      <div className={`flex items-center gap-2 px-4 py-2 border-b border-[#1A2744] bg-[#0A0F1A]/80 font-mono text-xs text-[#475569] ${className}`}>
-        <Info size={12} className="text-[#475569]" />
+      <div
+        className={className}
+        style={{
+          height: 34,
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 16px',
+          gap: 8,
+          borderBottom: `1px solid ${colors.border}`,
+          backgroundColor: `${colors.void}CC`,
+          fontFamily: fonts.sans,
+          fontSize: 11,
+          color: colors.textDim,
+        }}
+      >
+        <Info size={11} color={colors.textDim} />
         No active alerts
       </div>
     );
   }
 
+  const items = [...display, ...display];
+
   return (
     <div
-      ref={scrollRef}
-      className={`flex items-center gap-4 overflow-x-auto border-b border-[#1A2744] bg-[#0A0F1A]/80 py-2 px-4 scrollbar-hide ${className}`}
-      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      className={className}
+      style={{
+        height: 34,
+        overflow: 'hidden',
+        borderBottom: `1px solid ${colors.border}`,
+        backgroundColor: `${colors.void}CC`,
+        position: 'relative',
+      }}
     >
-      {display.map((a) => {
-        const Icon = SEVERITY_ICON[a.severity];
-        const style = SEVERITY_STYLE[a.severity];
-        return (
-          <div
-            key={a.id}
-            className={`flex-shrink-0 flex items-center gap-2 px-3 py-1.5 rounded border border-[#1A2744] bg-[#04070D] font-mono text-xs ${style}`}
-            title={new Date(a.timestamp).toLocaleTimeString()}
-          >
-            <Icon size={12} />
-            <span className="text-[#F1F5F9]">{a.message}</span>
-            <span className="text-[#475569]">{new Date(a.timestamp).toLocaleTimeString('en-US', { hour12: false })}</span>
-          </div>
-        );
-      })}
+      {/* Left fade */}
+      <div
+        style={{
+          position: 'absolute',
+          left: 0,
+          top: 0,
+          width: 40,
+          height: '100%',
+          background: `linear-gradient(to right, ${colors.void}, transparent)`,
+          zIndex: 1,
+          pointerEvents: 'none',
+        }}
+      />
+      {/* Right fade */}
+      <div
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          width: 40,
+          height: '100%',
+          background: `linear-gradient(to left, ${colors.void}, transparent)`,
+          zIndex: 1,
+          pointerEvents: 'none',
+        }}
+      />
+      <div
+        ref={innerRef}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 24,
+          height: '100%',
+          padding: '0 16px',
+          willChange: 'transform',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {items.map((a, i) => {
+          const Icon = SEVERITY_ICON[a.severity];
+          const col = SEVERITY_COLOR[a.severity];
+          return (
+            <span
+              key={`${a.id}-${i}`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                flexShrink: 0,
+              }}
+            >
+              <Icon size={11} color={col} />
+              <span style={{ fontFamily: fonts.sans, fontSize: 11, color: colors.textSec }}>
+                {a.message}
+              </span>
+              <span
+                style={{
+                  fontFamily: fonts.mono,
+                  fontSize: 9,
+                  color: colors.textDim,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {new Date(a.timestamp).toLocaleTimeString('en-US', { hour12: false })}
+              </span>
+              <span style={{ color: colors.border, fontFamily: fonts.mono }}>·</span>
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
