@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { usePulsePoint, useHospitals, getCategory, getMostActiveStatus } from './hooks';
 import { useWallTimeSimulation } from './hooks/useWallTimeSimulation';
+import { useWallTimeSampler } from './hooks/useWallTimeSampler';
 import type { SimIncident } from './lib/simulationTypes';
 import { mergeHospitalData, sortHospitals } from './lib/types';
 import type { HospitalDisplay } from './lib/types';
@@ -72,9 +73,12 @@ export default function App() {
   const [selectedHospitalId, setSelectedHospitalId] = useState<string | null>(null);
 
   // Data hooks
-  const { incidents: pulseIncidents, total, live } = usePulsePoint();
+  const { incidents: pulseIncidents, live } = usePulsePoint();
   const { hospitals: realHospitals } = useHospitals();
   const sim = useWallTimeSimulation(true);
+
+  // ─── WallTime transport sampler (studies live PulsePoint GPS → hospital routing) ──
+  const sampler = useWallTimeSampler(pulseIncidents);
 
   // ─── Hospital sparkline history ───────────────────────────────────────────
   const historyRef = useRef<Record<string, number[]>>({});
@@ -224,11 +228,31 @@ export default function App() {
           height: 28,
           borderTop: `1px solid ${colors.border}`,
           backgroundColor: `${colors.void}88`,
+          gap: 16,
         }}
       >
         <span style={{ fontFamily: fonts.mono, fontSize: 9, color: colors.cyan, letterSpacing: '0.1em' }}>
           FIREDASH v22.0
         </span>
+
+        {/* WallTime Sampler status */}
+        <span style={{ fontFamily: fonts.mono, fontSize: 9, color: colors.textDim, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span
+            style={{
+              width: 5, height: 5, borderRadius: '50%',
+              backgroundColor: sampler.totalCaptured > 0 ? colors.green : colors.textDim,
+              display: 'inline-block',
+            }}
+          />
+          WT SAMPLER
+          {sampler.totalCaptured > 0 && (
+            <span style={{ color: colors.green }}>{sampler.totalCaptured} obs</span>
+          )}
+          {sampler.mismatchCount > 0 && (
+            <span style={{ color: colors.amber }}>· {sampler.mismatchCount} mismatch</span>
+          )}
+        </span>
+
         <span style={{ fontFamily: fonts.mono, fontSize: 9, color: colors.textDim }}>
           APOT SOLUTIONS, INC.
         </span>

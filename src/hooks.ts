@@ -51,15 +51,45 @@ export function useHospitals(){
 
 // ─── RA Transports (derived from live PulsePoint incidents) ──────────
 // RA units in "Transport" or "TransportArrived/AtHospital" status are
-// matched to the nearest hospital to the incident origin coordinates.
-// This eliminates geographic nonsense like RA833 (South Central) → St. Johns (Santa Monica).
-export interface RATransport{unit:string;level:"ALS"|"BLS";hospital:string;wallTime:number;status:"EN ROUTE"|"AT HOSPITAL"|"AVAILABLE";chief:string}
+// matched to the nearest hospital using bureau-aware routing:
+//   1. Derive the unit's bureau from its station number (RA18 → station 18 → VALLEY)
+//   2. Filter hospitals to those that serve that bureau
+//   3. Pick nearest by haversine distance to incident GPS
+// This eliminates geographic nonsense like RA18 (Encino/Valley) → PLB (South Bay).
+export interface RATransport{unit:string;level:"ALS"|"BLS";hospital:string;wallTime:number;status:"EN ROUTE"|"AT HOSPITAL"|"AVAILABLE";chief:string;bureauMismatch?:boolean}
 
-function nearestHospital(incLat:number,incLng:number,hospitals:Hospital[]):Hospital|null{
-  if(!hospitals.length)return null;
-  let best=hospitals[0],bestDist=Infinity;
-  for(const h of hospitals){
-    if(!h.lat||!h.lng)continue;
+import{LA_HOSPITALS}from"./lib/hospitals";
+import{bureauForRAUnit}from"./lib/stationLocations";
+import type{LAFDBureau}from"./lib/stationLocations";
+
+function nearestHospitalBureauAware(
+  incLat:number,
+  incLng:number,
+  raUnitId:string,
+  liveHospitals:Hospital[],
+):Hospital|null{
+  if(!liveHospitals.length)return null;
+
+  const bureau=bureauForRAUnit(raUnitId);
+
+  // Build set of hospital IDs that serve this bureau from static list
+  const bureauHospIds=new Set(
+    LA_HOSPITALS.filter(h=>h.bureaus.includes(bureau as LAFDBureau)).map(h=>h.id)
+  );
+
+  // Match live hospitals to static IDs (by name or abbreviation)
+  function matchesBureau(h:Hospital):boolean{
+    return LA_HOSPITALS.some(lh=>
+      (lh.abbreviation===h.short||lh.name===h.name)&&bureauHospIds.has(lh.id)
+    );
+  }
+
+  const bureauPool=liveHospitals.filter(h=>h.lat&&h.lng&&matchesBureau(h));
+  const pool=bureauPool.length?bureauPool:liveHospitals.filter(h=>h.lat&&h.lng);
+  if(!pool.length)return null;
+
+  let best=pool[0],bestDist=Infinity;
+  for(const h of pool){
     const d=haversineKm(incLat,incLng,h.lat,h.lng);
     if(d<bestDist){bestDist=d;best=h;}
   }
@@ -84,9 +114,8 @@ export function useTransports(incidents:Incident[],hospitals:Hospital[]):{transp
         const enRoute=unit.status==="Transport";
         if(!atHosp&&!enRoute)continue;
         seen.add(unit.id);
-        const hosp=nearestHospital(incLat,incLng,hospitals);
+        const hosp=nearestHospitalBureauAware(incLat,incLng,unit.id,hospitals);
         if(!hosp)continue;
-        // Wall time estimate: elapsed since call minus ~30min for response+transport; minimum 0
         const elapsed=elapsedMinutes(inc.time);
         const wallTime=atHosp?Math.max(0,elapsed-30):0;
         result.push({
