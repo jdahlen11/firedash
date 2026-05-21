@@ -65,9 +65,9 @@ export default function HospitalList({ hospitals, onSelectHospital, className = 
         {/* Search */}
         <div style={{ position: 'relative' }}>
           <Search
-            size={13}
+            size={16}
             color={colors.textDim}
-            style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }}
+            style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }}
           />
           <input
             type="text"
@@ -78,10 +78,10 @@ export default function HospitalList({ hospitals, onSelectHospital, className = 
               width: '100%',
               backgroundColor: colors.card,
               border: `1px solid ${colors.border}`,
-              borderRadius: 6,
-              padding: '7px 10px 7px 30px',
+              borderRadius: 8,
+              padding: '13px 10px 13px 36px',
               fontFamily: fonts.sans,
-              fontSize: 11,
+              fontSize: 14,
               color: colors.text,
               outline: 'none',
               boxSizing: 'border-box',
@@ -99,11 +99,12 @@ export default function HospitalList({ hospitals, onSelectHospital, className = 
                 type="button"
                 onClick={() => setFilter(f.id)}
                 style={{
-                  padding: '4px 10px',
+                  padding: '11px 16px',
+                  minHeight: 44,
                   fontFamily: fonts.sans,
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 600,
-                  borderRadius: 20,
+                  borderRadius: 22,
                   border: `1px solid ${active ? colors.cyan : colors.border}`,
                   backgroundColor: active ? `${colors.cyan}22` : 'transparent',
                   color: active ? colors.cyan : colors.textSec,

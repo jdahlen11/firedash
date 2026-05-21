@@ -56,15 +56,15 @@ export default function AlertTicker({ alerts, className = '' }: AlertTickerProps
       <div
         className={className}
         style={{
-          height: 34,
+          height: 38,
           display: 'flex',
           alignItems: 'center',
           padding: '0 16px',
           gap: 8,
           borderBottom: `1px solid ${colors.border}`,
-          backgroundColor: `${colors.void}CC`,
+          backgroundColor: colors.void,
           fontFamily: fonts.sans,
-          fontSize: 11,
+          fontSize: 12,
           color: colors.textDim,
         }}
       >
@@ -80,10 +80,10 @@ export default function AlertTicker({ alerts, className = '' }: AlertTickerProps
     <div
       className={className}
       style={{
-        height: 34,
+        height: 38,
         overflow: 'hidden',
         borderBottom: `1px solid ${colors.border}`,
-        backgroundColor: `${colors.void}CC`,
+        backgroundColor: colors.void,
         position: 'relative',
       }}
     >
@@ -139,13 +139,13 @@ export default function AlertTicker({ alerts, className = '' }: AlertTickerProps
               }}
             >
               <Icon size={11} color={col} />
-              <span style={{ fontFamily: fonts.sans, fontSize: 11, color: colors.textSec }}>
+              <span style={{ fontFamily: fonts.sans, fontSize: 12, color: colors.textSec }}>
                 {a.message}
               </span>
               <span
                 style={{
                   fontFamily: fonts.mono,
-                  fontSize: 9,
+                  fontSize: 11,
                   color: colors.textDim,
                   letterSpacing: '0.04em',
                 }}

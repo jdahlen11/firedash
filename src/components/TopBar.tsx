@@ -39,10 +39,11 @@ export default function TopBar({
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 20px',
-        height: 48,
-        backgroundColor: `${colors.void}F0`,
-        borderBottom: `1px solid ${colors.border}`,
+        height: 68,
+        backgroundColor: colors.card,
+        borderBottom: `2px solid ${colors.border}`,
         backdropFilter: 'blur(8px)',
+        boxShadow: '0 1px 6px rgba(0,0,0,0.08)',
         gap: 16,
       }}
     >
@@ -52,7 +53,7 @@ export default function TopBar({
         <span
           style={{
             fontFamily: fonts.mono,
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: 700,
             letterSpacing: '0.18em',
             color: colors.text,
@@ -75,18 +76,19 @@ export default function TopBar({
               type="button"
               onClick={() => onTabChange(tab.id)}
               style={{
-                padding: '0 16px',
-                height: 48,
+                padding: '0 22px',
+                height: 68,
+                minWidth: 88,
                 fontFamily: fonts.sans,
-                fontSize: 11,
-                fontWeight: 600,
-                letterSpacing: '0.08em',
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: '0.06em',
                 color: isActive ? colors.cyan : colors.textSec,
-                background: 'none',
+                background: isActive ? `${colors.cyan}12` : 'none',
                 border: 'none',
-                borderBottom: isActive ? `2px solid ${colors.cyan}` : '2px solid transparent',
+                borderBottom: isActive ? `3px solid ${colors.cyan}` : '3px solid transparent',
                 cursor: 'pointer',
-                transition: 'color 0.15s, border-color 0.15s',
+                transition: 'color 0.15s, border-color 0.15s, background 0.15s',
               }}
             >
               {tab.label}
@@ -105,7 +107,7 @@ export default function TopBar({
           alignItems: 'center',
           gap: 20,
           fontFamily: fonts.sans,
-          fontSize: 11,
+          fontSize: 13,
           color: colors.textSec,
         }}
       >
@@ -142,9 +144,9 @@ export default function TopBar({
       <span
         style={{
           fontFamily: fonts.mono,
-          fontSize: 20,
+          fontSize: 24,
           fontWeight: 700,
-          letterSpacing: '0.08em',
+          letterSpacing: '0.06em',
           color: colors.text,
           fontVariantNumeric: 'tabular-nums',
           flexShrink: 0,

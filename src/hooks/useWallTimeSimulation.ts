@@ -18,7 +18,7 @@ import type {
 import { createInitialSimHospitals, LA_HOSPITALS, findNearestHospital } from '../lib/hospitals';
 import { STATION_LOCATIONS, type LAFDBureau } from '../lib/stationLocations';
 
-const TICK_MS = 800;
+const TICK_MS = 600000; // 10 minutes — freeze display, no flashing numbers
 const SIM_MINUTES_PER_TICK = 2;
 const SPAWN_PROBABILITY_PER_TICK = 0.12;
 const MAX_ACTIVE_INCIDENTS = 25;

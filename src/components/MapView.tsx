@@ -240,7 +240,7 @@ function HospitalPopup({
         <button
           type="button"
           onClick={onClose}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2 }}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 10, minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <X size={13} color={colors.textDim} />
         </button>
@@ -317,13 +317,14 @@ function HospitalPopup({
           onClick={onViewDetail}
           style={{
             width: '100%',
-            padding: '7px',
+            padding: '13px',
+            minHeight: 48,
             backgroundColor: `${colors.cyan}22`,
             border: `1px solid ${colors.cyan}55`,
-            borderRadius: 6,
+            borderRadius: 8,
             fontFamily: fonts.sans,
-            fontSize: 11,
-            fontWeight: 600,
+            fontSize: 13,
+            fontWeight: 700,
             color: colors.cyan,
             cursor: 'pointer',
             letterSpacing: '0.06em',

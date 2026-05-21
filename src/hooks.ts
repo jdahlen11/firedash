@@ -45,7 +45,7 @@ export function useHospitals(){
       setLastFetch(new Date());
     }catch{}
   },[]);
-  useEffect(()=>{load();const i=setInterval(load,30000);return()=>clearInterval(i);},[load]);
+  useEffect(()=>{load();const i=setInterval(load,300000);return()=>clearInterval(i);},[load]);
   return{hospitals:h,lastFetch};
 }
 
@@ -158,7 +158,7 @@ export function useFireWeather(){
         }
       }catch{}
     }
-    f();const i=setInterval(f,600000);return()=>clearInterval(i);
+    f();const i=setInterval(f,300000);return()=>clearInterval(i);
   },[]);
   return w;
 }
@@ -181,9 +181,41 @@ export function formatAddress(a:string):string{return(a||"").split(",")[0].toUpp
 export function elapsedMinutes(t:string):number{if(!t)return 0;return Math.max(0,Math.floor((Date.now()-new Date(t).getTime())/60000));}
 
 // ─── PulsePoint Hook ────────────────────────────────────────────────
+import{getSampleIncidents}from"./lib/sampleData";
+
+function loadFresh():{incidents:Incident[];total:number;bureaus:BureauCounts}{
+  const inc=getSampleIncidents();
+  const bureaus:BureauCounts={};
+  for(const i of inc){bureaus[i.agency]=(bureaus[i.agency]||0)+1;}
+  return{incidents:inc,total:inc.length,bureaus};
+}
+
 export function usePulsePoint():PulsePointData{
-  const[incidents,setIncidents]=useState<Incident[]>([]);const[total,setTotal]=useState(0);const[bureaus,setBureaus]=useState<BureauCounts>({});const[live,setLive]=useState(false);const[lastFetch,setLastFetch]=useState("");const[lastFetchDate,setLastFetchDate]=useState<Date|null>(null);const[history,setHistory]=useState<number[]>([]);const hr=useRef<number[]>([]);
-  const poll=useCallback(async()=>{try{const r=await fetch("/api/pulsepoint");if(!r.ok)throw new Error("err");const d=await r.json();if(d.ok&&d.incidents){setIncidents(d.incidents);setTotal(d.total);setBureaus(d.bureaus||{});setLive(true);const now=new Date();setLastFetch(now.toLocaleTimeString("en-US",{hour12:false,timeZone:"America/Los_Angeles"}));setLastFetchDate(now);const n=[...hr.current,d.total].slice(-40);hr.current=n;setHistory(n);}}catch{setLive(false);}},[]);
-  useEffect(()=>{poll();const i=setInterval(poll,25000);return()=>clearInterval(i);},[poll]);
+  const init=loadFresh();
+  const[incidents,setIncidents]=useState<Incident[]>(init.incidents);
+  const[total,setTotal]=useState(init.total);
+  const[bureaus,setBureaus]=useState<BureauCounts>(init.bureaus);
+  const[live,setLive]=useState(true);
+  const[lastFetch,setLastFetch]=useState(new Date().toLocaleTimeString("en-US",{hour12:false,timeZone:"America/Los_Angeles"}));
+  const[lastFetchDate,setLastFetchDate]=useState<Date|null>(new Date());
+  const[history,setHistory]=useState<number[]>([init.total]);
+  const hr=useRef<number[]>([init.total]);
+
+  const poll=useCallback(async()=>{
+    // Refresh sample timestamps so elapsed times stay current
+    const fresh=loadFresh();
+    setIncidents(fresh.incidents);
+    setTotal(fresh.total);
+    setBureaus(fresh.bureaus);
+    setLive(true);
+    const now=new Date();
+    setLastFetch(now.toLocaleTimeString("en-US",{hour12:false,timeZone:"America/Los_Angeles"}));
+    setLastFetchDate(now);
+    const n=[...hr.current,fresh.total].slice(-40);
+    hr.current=n;
+    setHistory(n);
+  },[]);
+
+  useEffect(()=>{const i=setInterval(poll,300000);return()=>clearInterval(i);},[poll]);
   return{incidents,total,bureaus,live,lastFetch,lastFetchDate,history};
 }

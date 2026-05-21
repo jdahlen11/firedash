@@ -1,19 +1,19 @@
-// FireDash v22 Design Tokens
+// FireDash v22 Design Tokens — Light Theme
 
 export const colors = {
-  void:       '#0B1120',
-  bg:         '#101828',
-  card:       '#151F32',
-  cardHover:  '#192843',
-  border:     '#1C2B48',
-  text:       '#E8ECF4',
-  textSec:    '#9EAEC7',
-  textDim:    '#5A6D8A',
-  cyan:       '#00C2E0',
-  red:        '#EF4444',
-  amber:      '#F59E0B',
-  green:      '#10B981',
-  indigo:     '#818CF8',
+  void:       '#EEF2F9',
+  bg:         '#F4F7FD',
+  card:       '#FFFFFF',
+  cardHover:  '#EAF0FB',
+  border:     '#C5D0E6',
+  text:       '#13223D',
+  textSec:    '#3B5280',
+  textDim:    '#7A8DAA',
+  cyan:       '#0078A0',
+  red:        '#C92020',
+  amber:      '#B05A00',
+  green:      '#1A7A52',
+  indigo:     '#4338CA',
 } as const;
 
 export const fonts = {

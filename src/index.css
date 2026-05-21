@@ -1,15 +1,15 @@
 @tailwind base;@tailwind components;@tailwind utilities;
-:root{--bg:#04070D;--s1:#0A0F1A;--s2:#0E1525;--bd:#1A2744;--t1:#E8ECF2;--t2:#7A879C;--t3:#3D4D66}
+:root{--bg:#F4F7FD;--s1:#EEF2F9;--s2:#FFFFFF;--bd:#C5D0E6;--t1:#13223D;--t2:#3B5280;--t3:#7A8DAA}
 *{box-sizing:border-box;margin:0;padding:0}
-html{height:100%;background:var(--bg);color:var(--t1);font-family:"Outfit",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+html{height:100%;background:var(--bg);color:var(--t1);font-family:"Inter","Outfit",system-ui,sans-serif;font-size:15px;-webkit-font-smoothing:antialiased}
 body{height:100%}
 #root{height:100%}
 @media(max-width:1024px){body,#root{overflow-y:auto;height:auto;min-height:100vh}}
 @media(min-width:1025px){body{overflow:hidden}#root{display:flex;flex-direction:column;overflow:hidden}}
-::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#1A2744;border-radius:2px}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#C5D0E6;border-radius:2px}
 .scrollbar-hide::-webkit-scrollbar{display:none}
 .mono{font-family:"IBM Plex Mono",monospace}
-.pn{background:#0E1525;border:1px solid #1A2744;border-radius:10px}
+.pn{background:#FFFFFF;border:1px solid #C5D0E6;border-radius:10px}
 @keyframes lp{0%,100%{opacity:1}50%{opacity:.3}}
 @keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 @keyframes tk{from{transform:translateX(0)}to{transform:translateX(-50%)}}

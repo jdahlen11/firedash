@@ -55,7 +55,7 @@ export default function SystemVitals({
         <span
           style={{
             fontFamily: fonts.sans,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             letterSpacing: '0.1em',
             color: colors.textSec,
@@ -71,10 +71,10 @@ export default function SystemVitals({
       {/* Strain */}
       <div style={{ padding: '12px 14px 8px', borderBottom: `1px solid ${colors.border}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-          <span style={{ fontFamily: fonts.sans, fontSize: 10, color: colors.textDim, letterSpacing: '0.08em' }}>
+          <span style={{ fontFamily: fonts.sans, fontSize: 12, color: colors.textDim, letterSpacing: '0.08em' }}>
             SYSTEM STRAIN
           </span>
-          <span style={{ fontFamily: fonts.mono, fontSize: 22, fontWeight: 700, color: sc }}>
+          <span style={{ fontFamily: fonts.mono, fontSize: 26, fontWeight: 700, color: sc }}>
             {strainPct}%
           </span>
         </div>
@@ -122,10 +122,10 @@ export default function SystemVitals({
             alignItems: 'center',
           }}
         >
-          <span style={{ fontFamily: fonts.sans, fontSize: 9, color: colors.textDim, letterSpacing: '0.08em' }}>
+          <span style={{ fontFamily: fonts.sans, fontSize: 11, color: colors.textDim, letterSpacing: '0.08em' }}>
             COUNTY AVG WALL
           </span>
-          <span style={{ fontFamily: fonts.mono, fontSize: 13, fontWeight: 600, color: colors.textSec }}>
+          <span style={{ fontFamily: fonts.mono, fontSize: 15, fontWeight: 600, color: colors.textSec }}>
             {countyAvgMin}m
           </span>
         </div>
@@ -148,8 +148,8 @@ function Row({
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       {icon}
-      <span style={{ fontFamily: fonts.sans, fontSize: 10, color: colors.textSec, flex: 1 }}>{label}</span>
-      <span style={{ fontFamily: fonts.mono, fontSize: 15, fontWeight: 700, color: valueColor }}>
+      <span style={{ fontFamily: fonts.sans, fontSize: 12, color: colors.textSec, flex: 1 }}>{label}</span>
+      <span style={{ fontFamily: fonts.mono, fontSize: 17, fontWeight: 700, color: valueColor }}>
         {value}
       </span>
     </div>

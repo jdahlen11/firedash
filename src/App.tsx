@@ -227,7 +227,7 @@ export default function App() {
           padding: '0 20px',
           height: 28,
           borderTop: `1px solid ${colors.border}`,
-          backgroundColor: `${colors.void}88`,
+          backgroundColor: colors.void,
           gap: 16,
         }}
       >
